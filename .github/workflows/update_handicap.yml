@@ -1,7 +1,7 @@
 name: Update Handicap Data
 on:
   schedule:
-    - cron: '0 12 * * 2' # Runs weekly on Tuesday
+    - cron: '0 15 * * 0' # Runs weekly on Tuesday
   workflow_dispatch:      # Allows you to click 'Run workflow' manually
 
 jobs:
