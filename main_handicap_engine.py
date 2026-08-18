@@ -31,6 +31,8 @@ def fetch_club_segment_efforts(club_id, segment_id):
         return []
         
     headers = {'Authorization': f'Bearer {access_token}'}
+    
+    # 1. Get recent club activities
     url = f'https://www.strava.com/api/v3/clubs/{club_id}/activities'
     response = requests.get(url, headers=headers)
     
@@ -41,16 +43,27 @@ def fetch_club_segment_efforts(club_id, segment_id):
     activities = response.json()
     club_efforts = []
 
-    # Note: 'segment_effort_id' is not a standard field in the club activities list.
-    # We are logging the activity here, but Strava usually requires you to fetch the 
-    # specific activity details to confirm segment matches.
+    # 2. Iterate through activity summaries to get detailed IDs
     for activity in activities:
-        # Placeholder logic: check if the activity is the one we want
-        # Note: You may need to refine this based on actual Strava API activity response structure
-        club_efforts.append({
-            "Name": f"{activity['athlete']['firstname']} {activity['athlete'].get('lastname', '')}".strip(),
-            "actual_time_sec": activity['elapsed_time']
-        })
+        activity_id = activity['id']
+        
+        # 3. Fetch detailed activity to see segment efforts
+        detail_url = f'https://www.strava.com/api/v3/activities/{activity_id}?include_all_efforts=true'
+        detail_resp = requests.get(detail_url, headers=headers)
+        
+        if detail_resp.status_code == 200:
+            activity_details = detail_resp.json()
+            
+            # 4. Look through segment_efforts for our target segment_id
+            for effort in activity_details.get('segment_efforts', []):
+                # We compare as strings to ensure matching
+                if str(effort['segment']['id']) == str(segment_id):
+                    club_efforts.append({
+                        "Name": f"{activity['athlete']['firstname']} {activity['athlete'].get('lastname', '')}".strip(),
+                        "actual_time_sec": effort['elapsed_time']
+                    })
+                    break # Found the effort for this rider, move to next activity
+    
     return club_efforts
 
 def process_club_handicaps(club_id, segment_id):
