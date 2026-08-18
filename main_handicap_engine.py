@@ -3,6 +3,14 @@ import requests
 import pandas as pd
 from datetime import datetime
 
+def process_club_handicaps():
+    MY_CLUB_ID = "224169" # Put your ID here
+    MY_SEGMENT_ID = "41151160" # Put your Segment ID here
+    
+    # Pass these to your fetch function
+    efforts = fetch_club_segment_efforts(MY_CLUB_ID, MY_SEGMENT_ID)
+    # ... rest of your code
+
 # Credentials
 CLIENT_ID = os.environ.get('STRAVA_CLIENT_ID')
 CLIENT_SECRET = os.environ.get('STRAVA_CLIENT_SECRET')
