@@ -28,41 +28,44 @@ def get_fresh_token():
 def fetch_club_segment_efforts(club_id, segment_id):
     access_token = get_fresh_token()
     if not access_token:
-        print("Error: Could not retrieve access token.")
         return []
         
     headers = {'Authorization': f'Bearer {access_token}'}
+    # 1. Get recent club activities
     url = f'https://www.strava.com/api/v3/clubs/{club_id}/activities'
     response = requests.get(url, headers=headers)
     
     if response.status_code != 200:
-        print(f"Error fetching club activities: {response.status_code}, {response.text}")
+        print(f"Error fetching club activities: {response.status_code}")
         return []
 
     activities = response.json()
     club_efforts = []
 
     for activity in activities:
-        if 'id' not in activity:
-            print(f"Skipping malformed activity: {activity}")
+        # STRAVA API FIX: The 'id' is sometimes just 'id' or nested in a summary. 
+        # If it's missing, try to see if the object has it.
+        activity_id = activity.get('id')
+        
+        # If still None, it's a privacy-restricted activity we cannot fetch details for.
+        if not activity_id:
             continue
-        activity_id = activity['id']
+            
+        # 2. Fetch detailed activity
         detail_url = f'https://www.strava.com/api/v3/activities/{activity_id}?include_all_efforts=true'
         detail_resp = requests.get(detail_url, headers=headers)
         
         if detail_resp.status_code == 200:
             activity_details = detail_resp.json()
-            # 4. Look through segment_efforts for our target segment_id
             for effort in activity_details.get('segment_efforts', []):
-                # Ensure effort has a segment and id
-                if effort.get('segment') and str(effort['segment'].get('id')) == str(segment_id):
+                if str(effort['segment']['id']) == str(segment_id):
                     club_efforts.append({
                         "Name": f"{activity['athlete']['firstname']} {activity['athlete'].get('lastname', '')}".strip(),
                         "actual_time_sec": effort['elapsed_time']
                     })
-                    break
+                    break 
     return club_efforts
-
+    
 def process_club_handicaps(club_id, segment_id):
     efforts = fetch_club_segment_efforts(club_id, segment_id)
     if not efforts:
