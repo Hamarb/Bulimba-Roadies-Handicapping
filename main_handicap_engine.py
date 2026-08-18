@@ -12,6 +12,9 @@ REFRESH_TOKEN = os.environ.get('STRAVA_REFRESH_TOKEN')
 
 def get_fresh_token():
     """Refreshes the access token automatically."""
+    # ADD THIS LINE TO DEBUG:
+    print(f"DEBUG: Using Client ID: {CLIENT_ID}, Refresh Token present: {bool(REFRESH_TOKEN)}")
+    
     data = {
         'client_id': CLIENT_ID,
         'client_secret': CLIENT_SECRET,
@@ -19,6 +22,10 @@ def get_fresh_token():
         'refresh_token': REFRESH_TOKEN
     }
     response = requests.post('https://www.strava.com/api/v3/oauth/token', data=data)
+    
+    if response.status_code != 200:
+        print(f"Full Error Response: {response.json()}")
+        
     if response.status_code == 200:
         return response.json()['access_token']
     else:
