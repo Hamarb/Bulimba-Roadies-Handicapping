@@ -2,6 +2,13 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
+import os
+
+# Instead of hardcoding keys:
+CLIENT_ID = os.environ.get('STRAVA_CLIENT_ID')
+CLIENT_SECRET = os.environ.get('STRAVA_CLIENT_SECRET')
+ACCESS_TOKEN = os.environ.get('STRAVA_ACCESS_TOKEN')
+
 st.set_page_config(page_title="Bulimba Roadies Handicapping", page_icon="🚴‍♂️", layout="wide")
 
 st.title("🚴‍♂️ Bulimba Roadies - Dynamic Handicapping Portal")
