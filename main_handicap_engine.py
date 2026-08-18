@@ -32,36 +32,24 @@ def fetch_club_segment_efforts(club_id, segment_id):
         
     headers = {'Authorization': f'Bearer {access_token}'}
     
-    # FETCH FROM YOUR ATHLETE ACTIVITIES (More reliable than Club endpoint)
-    # This fetches your last 20 activities which include the full 'id' field
-    url = "https://www.strava.com/api/v3/athlete/activities?per_page=20"
+    # Query the segment leaderboard directly for the club
+    url = f"https://www.strava.com/api/v3/segments/{segment_id}/leaderboard?club_id={club_id}&per_page=50"
     response = requests.get(url, headers=headers)
     
     if response.status_code != 200:
-        print(f"Error fetching athlete activities: {response.status_code}")
+        print(f"Error fetching segment leaderboard: {response.status_code}, {response.text}")
         return []
 
-    activities = response.json()
+    data = response.json()
     club_efforts = []
 
-    for activity in activities:
-        activity_id = activity.get('id')
-        if not activity_id:
-            continue
-            
-        detail_url = f"https://www.strava.com/api/v3/activities/{activity_id}?include_all_efforts=true"
-        detail_resp = requests.get(detail_url, headers=headers)
+    # Strava returns leaderboard entries in 'entries'
+    for entry in data.get('entries', []):
+        club_efforts.append({
+            "Name": f"{entry.get('athlete_name', 'Unknown')}",
+            "actual_time_sec": entry.get('elapsed_time')
+        })
         
-        if detail_resp.status_code == 200:
-            activity_details = detail_resp.json()
-            for effort in activity_details.get('segment_efforts', []):
-                # Check for segment match
-                if str(effort['segment']['id']) == str(segment_id):
-                    club_efforts.append({
-                        "Name": f"{activity['athlete'].get('firstname', 'Unknown')}",
-                        "actual_time_sec": effort['elapsed_time']
-                    })
-                    break 
     return club_efforts
     
 def process_club_handicaps(club_id, segment_id):
