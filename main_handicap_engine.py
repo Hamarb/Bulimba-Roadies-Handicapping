@@ -31,36 +31,34 @@ def fetch_club_segment_efforts(club_id, segment_id):
         return []
         
     headers = {'Authorization': f'Bearer {access_token}'}
-    # 1. Get recent club activities
-    url = f'https://www.strava.com/api/v3/clubs/{club_id}/activities'
+    
+    # FETCH FROM YOUR ATHLETE ACTIVITIES (More reliable than Club endpoint)
+    # This fetches your last 20 activities which include the full 'id' field
+    url = "https://www.strava.com/api/v3/athlete/activities?per_page=20"
     response = requests.get(url, headers=headers)
     
     if response.status_code != 200:
-        print(f"Error fetching club activities: {response.status_code}")
+        print(f"Error fetching athlete activities: {response.status_code}")
         return []
 
     activities = response.json()
     club_efforts = []
 
     for activity in activities:
-        # STRAVA API FIX: The 'id' is sometimes just 'id' or nested in a summary. 
-        # If it's missing, try to see if the object has it.
         activity_id = activity.get('id')
-        
-        # If still None, it's a privacy-restricted activity we cannot fetch details for.
         if not activity_id:
             continue
             
-        # 2. Fetch detailed activity
-        detail_url = f'https://www.strava.com/api/v3/activities/{activity_id}?include_all_efforts=true'
+        detail_url = f"https://www.strava.com/api/v3/activities/{activity_id}?include_all_efforts=true"
         detail_resp = requests.get(detail_url, headers=headers)
         
         if detail_resp.status_code == 200:
             activity_details = detail_resp.json()
             for effort in activity_details.get('segment_efforts', []):
+                # Check for segment match
                 if str(effort['segment']['id']) == str(segment_id):
                     club_efforts.append({
-                        "Name": f"{activity['athlete']['firstname']} {activity['athlete'].get('lastname', '')}".strip(),
+                        "Name": f"{activity['athlete'].get('firstname', 'Unknown')}",
                         "actual_time_sec": effort['elapsed_time']
                     })
                     break 
