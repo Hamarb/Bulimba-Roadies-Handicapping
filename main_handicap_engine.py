@@ -23,19 +23,31 @@ def get_fresh_token():
         print(f"Token refresh failed: {response.status_code}")
         return None
 
-def fetch_segment_efforts(segment_id):
+def fetch_club_segment_efforts(club_id, segment_id):
     access_token = get_fresh_token()
-    if not access_token:
-        return []
-        
     headers = {'Authorization': f'Bearer {access_token}'}
-    url = f'https://www.strava.com/api/v3/segments/{segment_id}/all_efforts'
+    
+    # 1. Get recent club activities
+    url = f'https://www.strava.com/api/v3/clubs/{club_id}/activities'
     response = requests.get(url, headers=headers)
     
-    if response.status_code == 200:
-        return response.json()
-    else:
-        print(f"Error fetching from Strava: {response.status_code}")
+    if response.status_code != 200:
+        print(f"Error fetching club activities: {response.status_code}")
         return []
+
+    activities = response.json()
+    club_efforts = []
+
+    # 2. Filter activities for the specific segment
+    for activity in activities:
+        # Note: You may need to fetch detailed activity data to see segments
+        # This is a simplified check
+        if activity.get('segment_effort_id') == segment_id: # or similar logic
+            club_efforts.append({
+                "Name": activity['athlete']['firstname'],
+                "actual_time_sec": activity['elapsed_time']
+            })
+    return club_efforts
+
 
 # ... (Keep the rest of your process_club_handicaps logic as is)
