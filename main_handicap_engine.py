@@ -43,19 +43,24 @@ def fetch_club_segment_efforts(club_id, segment_id):
     club_efforts = []
 
     for activity in activities:
+        if 'id' not in activity:
+            print(f"Skipping malformed activity: {activity}")
+            continue
         activity_id = activity['id']
         detail_url = f'https://www.strava.com/api/v3/activities/{activity_id}?include_all_efforts=true'
         detail_resp = requests.get(detail_url, headers=headers)
         
         if detail_resp.status_code == 200:
             activity_details = detail_resp.json()
+            # 4. Look through segment_efforts for our target segment_id
             for effort in activity_details.get('segment_efforts', []):
-                if str(effort['segment']['id']) == str(segment_id):
+                # Ensure effort has a segment and id
+                if effort.get('segment') and str(effort['segment'].get('id')) == str(segment_id):
                     club_efforts.append({
                         "Name": f"{activity['athlete']['firstname']} {activity['athlete'].get('lastname', '')}".strip(),
                         "actual_time_sec": effort['elapsed_time']
                     })
-                    break 
+                    break
     return club_efforts
 
 def process_club_handicaps(club_id, segment_id):
