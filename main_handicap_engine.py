@@ -32,25 +32,48 @@ def fetch_club_segment_efforts(club_id, segment_id):
         
     headers = {'Authorization': f'Bearer {access_token}'}
     
-    # Query the segment leaderboard directly for the club
-    url = f"https://www.strava.com/api/v3/segments/{segment_id}/leaderboard?club_id={club_id}&per_page=50"
+    # Increase per_page to 200 to capture more club activities
+    url = f"https://www.strava.com/api/v3/clubs/{club_id}/activities?per_page=200"
     response = requests.get(url, headers=headers)
     
     if response.status_code != 200:
-        print(f"Error fetching segment leaderboard: {response.status_code}, {response.text}")
+        print(f"Error fetching club activities: {response.status_code}")
         return []
 
-    data = response.json()
+    activities = response.json()
     club_efforts = []
 
-    # Strava returns leaderboard entries in 'entries'
-    for entry in data.get('entries', []):
-        club_efforts.append({
-            "Name": f"{entry.get('athlete_name', 'Unknown')}",
-            "actual_time_sec": entry.get('elapsed_time')
-        })
+    for activity in activities:
+        # Check if the activity is a 'Ride' and has a name/id
+        # Sometimes 'id' is in the activity object
+        activity_id = activity.get('id')
         
-    return club_efforts
+        # If no id, skip to next
+        if not activity_id:
+            continue
+            
+        detail_url = f"https://www.strava.com/api/v3/activities/{activity_id}?include_all_efforts=true"
+        detail_resp = requests.get(detail_url, headers=headers)
+        
+        if detail_resp.status_code == 200:
+            activity_details = detail_resp.json()
+            # Loop through efforts to find our segment
+            for effort in activity_details.get('segment_efforts', []):
+                if str(effort.get('segment', {}).get('id')) == str(segment_id):
+                    club_efforts.append({
+                        "Name": f"{activity['athlete']['firstname']} {activity['athlete'].get('lastname', '')}".strip(),
+                        "actual_time_sec": effort['elapsed_time']
+                    })
+                    # Found the effort, stop checking this activity and move to next one
+                    break 
+                    
+    # Remove duplicate riders (keeping the fastest time for each)
+    if club_efforts:
+        df_temp = pd.DataFrame(club_efforts)
+        df_temp = df_temp.sort_values('actual_time_sec').drop_duplicates('Name')
+        return df_temp.to_dict('records')
+        
+    return []
     
 def process_club_handicaps(club_id, segment_id):
     efforts = fetch_club_segment_efforts(club_id, segment_id)
