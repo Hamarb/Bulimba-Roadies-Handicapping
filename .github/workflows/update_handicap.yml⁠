@@ -1,1 +1,28 @@
+name: Update Handicap Data
+on:
+  schedule:
+    - cron: '0 15 * * 0' # Runs weekly on Tuesday
+  workflow_dispatch:      # Allows you to click 'Run workflow' manually
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: pip install pandas requests
+
+      - name: Run handicap engine
+        env:
+          STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
+          STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
+          STRAVA_ACCESS_TOKEN: ${{ secrets.STRAVA_ACCESS_TOKEN }}
+        run: python main_handicap_engine.py
 
