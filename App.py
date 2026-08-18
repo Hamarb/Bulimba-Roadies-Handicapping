@@ -4,7 +4,7 @@ import pandas as pd
 st.set_page_config(page_title="Bulimba Roadies Handicapping", page_icon="🚴‍♂️", layout="wide")
 
 st.title("🚴‍♂️ Bulimba Roadies - Dynamic Handicapping Portal")
-st.markdown("Review the active participant seeding order (fastest to slowest) and update your FTP to refine club handicaps.")
+st.markdown("Review the active participant seeding order and update your FTP to refine handicaps.")
 
 # Initialize mock participant data (can be linked to your Strava / Excel backend)
 if 'riders_df' not in st.session_state:
@@ -34,7 +34,7 @@ sorted_riders["Seed Rank"] = sorted_riders.index + 1
 # Reorder columns for display
 sorted_riders = sorted_riders[["Seed Rank", "Name", "FTP (W)", "Segment Time (s)"]]
 
-st.subheader("🏁 Current Club Seeding Order (Fastest to Slowest)")
+st.subheader("🏁 Current Seeding Order")
 st.dataframe(sorted_riders, use_container_width=True)
 
 if st.button("🚀 Generate Weekly Handicap Sheet"):
