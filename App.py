@@ -8,9 +8,6 @@ from google.oauth2.service_account import Credentials
 
 st.set_page_config(page_title="Welcome to the Bulimba Roadies Monthly Challenge", page_icon="🚴‍♂️", layout="wide")
 
-# --- FILE CONFIG & GOOGLE SHEETS SETUP ---
-FAQ_FILE = "faq_data.csv"
-
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
@@ -95,6 +92,31 @@ def format_time(sec):
     m, s = int(sec // 60), int(sec % 60)
     return f"0:{m:02d}:{s:02d}"
 
+def load_faq_data():
+    """Loads FAQ data from the 'FAQ' worksheet."""
+    expected_columns = ["Question", "Answer"]
+    try:
+        sheet = init_connection().worksheet("FAQ")
+        data = sheet.get_all_records()
+        df = pd.DataFrame(data)
+        if df.empty:
+            return pd.DataFrame(columns=expected_columns)
+        for col in expected_columns:
+            if col not in df.columns:
+                df[col] = ""
+        return df
+    except Exception:
+        return pd.DataFrame(columns=expected_columns)
+
+def save_faq_data(df):
+    """Saves the FAQ dataframe back to the 'FAQ' worksheet."""
+    try:
+        sheet = init_connection().worksheet("FAQ")
+        sheet.clear()
+        sheet.update([df.columns.values.tolist()] + df.values.tolist())
+    except Exception as e:
+        st.error(f"Failed to save FAQ data: {e}")
+        
 SEGMENT_URL = get_segment_url()
 st.title("🚴‍♂️ Bulimba Roadies - Monthly Challenge")
 
@@ -201,15 +223,20 @@ with tab_res:
 
 with tab_faq:
     st.header("Frequently Asked Questions")
-    if os.path.exists(FAQ_FILE):
-        faq_df = pd.read_csv(FAQ_FILE)
+    
+    # Load FAQ data from Google Sheets
+    faq_df = load_faq_data()
+    
+    if not faq_df.empty:
+        for _, row in faq_df.iterrows():
+            # Ensure it doesn't fail if blank rows exist
+            if str(row["Question"]).strip():
+                with st.expander(str(row["Question"])): 
+                    st.write(str(row["Answer"]))
     else:
-        faq_df = pd.DataFrame(columns=["Question", "Answer"])
-        
-    for _, row in faq_df.iterrows():
-        with st.expander(str(row["Question"])): 
-            st.write(str(row["Answer"]))
-            
+        st.info("No FAQs available yet.")
+    
+    # New Question Submission
     st.markdown("---")
     q = st.text_input("Submit a question:")
     
@@ -218,15 +245,18 @@ with tab_faq:
             st.error("Question cannot be empty.")
         elif is_inappropriate(q):
             st.error("Keep it constructive.")
-        elif q in faq_df["Question"].values:
+        elif not faq_df.empty and q in faq_df["Question"].values:
             st.warning("This question has already been submitted.")
         else:
             new_q = pd.DataFrame([{"Question": q, "Answer": "Response pending"}])
             faq_df = pd.concat([faq_df, new_q], ignore_index=True)
-            faq_df.to_csv(FAQ_FILE, index=False)
-            st.success("Question submitted!")
+            
+            # Save permanently to Google Sheets
+            save_faq_data(faq_df)
+            
+            st.success("Question submitted! It will appear here once reviewed.")
             st.rerun()
-
+            
 with tab_admin:
     if st.checkbox("Show Admin Segment Controls"):
         st.header("Admin Configuration & Submitter Tracking")
@@ -253,7 +283,3 @@ with tab_admin:
             st.dataframe(segment_df.sort_values(by="Date", ascending=False).head(10), use_container_width=True, hide_index=True)
         else:
             st.write("No segment history available.")
-        
-        if os.path.exists(FAQ_FILE):
-            with open(FAQ_FILE, "rb") as f:
-                st.download_button("Download current FAQ", f, "faq_data.csv")
