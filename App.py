@@ -42,12 +42,12 @@ with tab_inst:
 
 with tab_entry:
     st.header("Data Entry")
-    st.markdown(f"**Challenge Segment:** [{SEGMENT_URL}]({SEGMENT_URL})")
+    st.markdown(f"**Active Challenge Segment:** [{SEGMENT_URL}]({SEGMENT_URL})")
     with st.form("entry_form", clear_on_submit=True):
         name = st.text_input("Name")
-        ftp = st.number_input("Current FTP (Watts)", 0, 500, 250)
-        time = st.number_input("Segment Time (seconds)", 60, 3600, 400)
-        delta_est = st.number_input("Your Estimated Delta (seconds)", 10, 1200, 300, help="What do you think is the gap between the fastest and slowest rider today?")
+        ftp = st.number_input("Current FTP (Watts). The amount of power can you maintain for 20 minutes.", 0, 500, 100)
+        time = st.number_input("Your actual time to complete the segment from Strava (in seconds)", 60, 3600, 400)
+        delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place.", 10, 1200, 300, help="What do you think is the gap between the fastest and slowest rider today?")
         
         if st.form_submit_button("Submit Entry"):
             if not name: st.error("Name is required!")
