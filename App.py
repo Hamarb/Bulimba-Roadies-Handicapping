@@ -258,8 +258,9 @@ with tab_admin:
         if os.path.exists(FAQ_FILE):
             with open(FAQ_FILE, "rb") as f:
                 st.download_button("Download current FAQ", f, "faq_data.csv")
-                if st.button("🚨 Permanently Reset Data"):
-                    st.warning("This will delete all current challenge data.")
-                if os.path.exists(DATA_FILE): os.remove(DATA_FILE)
-                if os.path.exists(HISTORY_FILE): os.remove(HISTORY_FILE)
-                st.rerun()
+        
+        if st.button("🚨 Permanently Reset Data"):
+            st.warning("This will delete all current challenge data.")
+            if os.path.exists(DATA_FILE): os.remove(DATA_FILE)
+            if os.path.exists(HISTORY_FILE): os.remove(HISTORY_FILE)
+            st.rerun()
