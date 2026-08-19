@@ -8,26 +8,38 @@ st.set_page_config(page_title="Welcome to the Bulimba Roadies Monthly Challenge"
 # --- FILE CONFIG ---
 DATA_FILE = "manual_entries.csv"
 FAQ_FILE = "faq_data.csv"
-SEGMENT_URL = "https://www.strava.com/segments/22270858"
+CONFIG_FILE = "config.csv"
+
+def get_segment_url():
+    if os.path.exists(CONFIG_FILE):
+        try: return pd.read_csv(CONFIG_FILE).iloc[0]["URL"]
+        except: pass
+    return "https://www.strava.com/segments/22270858"
+
+def save_segment_url(url):
+    pd.DataFrame({"URL": [url]}).to_csv(CONFIG_FILE, index=False)
+
+def is_inappropriate(text):
+    bad_words = ["rude", "badword1", "badword2"] 
+    return any(word in text.lower() for word in bad_words)
 
 def load_data(file, cols):
     if os.path.exists(file):
         try:
             df = pd.read_csv(file)
-            # Check if all required columns are present. If not, add them.
             for col in cols:
                 if col not in df.columns:
                     df[col] = 0 if col not in ["Name", "Date"] else ""
             return df
         except Exception:
             return pd.DataFrame(columns=cols)
-    # If file doesn't exist, return an empty DataFrame with the correct columns
     return pd.DataFrame(columns=cols)
 
 def format_time(sec):
     m, s = int(sec // 60), int(sec % 60)
     return f"0:{m:02d}:{s:02d}"
 
+SEGMENT_URL = get_segment_url()
 st.title("🚴‍♂️ Bulimba Roadies - Monthly Challenge")
 
 # --- TABS ---
@@ -36,7 +48,6 @@ tab_inst, tab_entry, tab_seed, tab_res, tab_faq, tab_admin = st.tabs(
 )
 
 with tab_inst:
-    # st.header("Welcome to the Bulimba Roadies Handicap Challenge!")
     st.info("Disclaimer: This application is a casual social experiment. Participation is entirely voluntary, and no one involved in the creation, hosting, or management of this app is legally or financially accountable for any outcomes, incidents, or errors. AI-generated elements and handicap calculations may include mistakes—use your best judgment and ride safely!")
     st.markdown(f"**The active challenge segment is:** [{SEGMENT_URL}]({SEGMENT_URL})")
     st.markdown("All submitted data is stored for 45 days. Data deletion is automated via a backend workflow.")
@@ -51,7 +62,7 @@ with tab_entry:
         delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place.", 10, 1200, 300, help="What do you think is the gap between the fastest and slowest rider?")
         
         if st.form_submit_button("Submit Entry"):
-            if not name: st.error("Name is required!")
+            if not name or is_inappropriate(name): st.error("Please enter a valid, constructive name.")
             else:
                 df = load_data(DATA_FILE, ["Name", "FTP (W)", "Segment Time (s)", "Delta_Estimate", "Date"])
                 new_entry = pd.DataFrame([{"Name": name, "FTP (W)": ftp, "Segment Time (s)": time, 
@@ -64,9 +75,11 @@ with tab_entry:
 with tab_seed:
     st.header("Seeding Order")
     df = load_data(DATA_FILE, ["Name", "FTP (W)", "Date"])
-    if not df.empty:
+    if not df.empty and "FTP (W)" in df.columns:
         seed_df = df.sort_values(by="FTP (W)", ascending=False)[["Name", "FTP (W)", "Date"]]
         st.dataframe(seed_df, use_container_width=True, hide_index=True)
+    else:
+        st.info("No data available.")
 
 with tab_res:
     st.header("Challenge Results")
@@ -77,8 +90,6 @@ with tab_res:
         delta = active["Delta_Estimate"].mean()
         active = active.sort_values(by="Segment Time (s)").reset_index(drop=True)
         count = len(active)
-        
-        # Handicap Logic
         handicaps = [round(delta * (1 - (i / (count - 1)))) if count > 1 else 0 for i in range(count)]
         active["Handicap_Sec"] = handicaps
         active["Adjusted_Sec"] = active["Segment Time (s)"] + active["Handicap_Sec"]
@@ -108,17 +119,19 @@ with tab_faq:
     
     q = st.text_input("Submit a question:")
     if st.button("Submit Question"):
-        if any(bad in q.lower() for bad in ["rude", "name"]): st.error("Keep it constructive and avoid personal names.")
+        if is_inappropriate(q): st.error("Keep it constructive.")
         else: st.success("Question submitted for review.")
 
 with tab_admin:
     st.header("Admin Configuration")
-    
-    if st.checkbox("Show Admin Controls"):
-        st.text_input("Active Challenge Segment URL", value=SEGMENT_URL, disabled=True)
+    new_url = st.text_input("Active Challenge Segment URL", value=SEGMENT_URL)
+    if st.button("Update Segment URL"):
+        save_segment_url(new_url)
+        st.rerun()
+        
+    if st.checkbox("Show Admin Reset Controls"):
         st.markdown("All submitted data is stored for 45 days. Data deletion is automated via a backend workflow.")
         st.warning("This will delete all current challenge data.")
         if st.button("🚨 PERMANENTLY RESET DATA"):
-            if os.path.exists(DATA_FILE):
-                os.remove(DATA_FILE)
-                st.rerun()
+            if os.path.exists(DATA_FILE): os.remove(DATA_FILE)
+            st.rerun()
