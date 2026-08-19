@@ -14,13 +14,19 @@ jobs:
           import pandas as pd
           from datetime import datetime, timedelta
           import os
-          
+
+          # 1. Clean manual_entries.csv
           if os.path.exists('manual_entries.csv'):
               df = pd.read_csv('manual_entries.csv')
               df['Date'] = pd.to_datetime(df['Date'])
               cutoff = datetime.now() - timedelta(days=45)
               df_clean = df[df['Date'] >= cutoff]
               df_clean.to_csv('manual_entries.csv', index=False)
+          "
+          # 2. Ensure faq_data.csv remains untouched (or add other logic if needed)
+          # We don't need to 'clean' this, just ensure it exists
+          if not os.path.exists('faq_data.csv'):
+              pd.DataFrame(columns=['Question', 'Answer']).to_csv('faq_data.csv', index=False)
           "
       - name: Commit and Push
         run: |
