@@ -28,27 +28,35 @@ def fetch_from_strava(club_id, segment_id):
     headers = {'Authorization': f'Bearer {access_token}'}
     url = f"https://www.strava.com/api/v3/clubs/{club_id}/activities?per_page=200"
     response = requests.get(url, headers=headers)
+    
     print(f"DEBUG: Strava API Response Code: {response.status_code}")
-    if response.status_code == 200:
-        activities = response.json()
-        print(f"DEBUG: Fetched {len(activities)} activities from Strava.")
-    else:
+    if response.status_code != 200:
         print(f"DEBUG: API Error Details: {response.text}")
+        return []
 
+    activities = response.json()
+    print(f"DEBUG: Fetched {len(activities)} activities from Strava.")
+    
     club_efforts = []
-    for activity in response.json():
+    for activity in activities:
+        # DIAGNOSTIC: Print what we are scanning
+        print(f"DEBUG: Scanning activity: '{activity.get('name')}' by {activity.get('athlete', {}).get('firstname')}")
+        
         activity_id = activity.get('id')
         if not activity_id: continue
             
         detail_url = f"https://www.strava.com/api/v3/activities/{activity_id}?include_all_efforts=true"
         detail_resp = requests.get(detail_url, headers=headers)
+        
         if detail_resp.status_code == 200:
             for effort in detail_resp.json().get('segment_efforts', []):
+                # Ensure we compare ID as strings
                 if str(effort.get('segment', {}).get('id')) == str(segment_id):
                     club_efforts.append({
                         "Name": f"{activity['athlete']['firstname']} {activity['athlete'].get('lastname', '')}".strip(),
                         "actual_time_sec": effort['elapsed_time']
                     })
+                    print(f"DEBUG: Found segment match for {activity['athlete']['firstname']}")
                     break 
     return club_efforts
 
