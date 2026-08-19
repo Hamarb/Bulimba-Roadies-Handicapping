@@ -145,9 +145,9 @@ with tab_inst:
            
         4. **The Adjusted Finish** Your official adjusted time is calculated by adding your calculated handicap to your actual segment time:
 
-        *Adjusted Time = Actual Time + Handicap*
+            *Adjusted Time = Actual Time + Handicap*
 
-        The rider with the fastest adjusted time takes the win!
+            The rider with the fastest adjusted time takes the win!
 
         ---
 
