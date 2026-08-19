@@ -68,8 +68,10 @@ def is_inappropriate(text):
     return any(word in text.lower() for word in bad_words)
 
 def load_data(file, cols):
+    # Ensure we are looking at the current path
     if os.path.exists(file):
         try:
+            # Re-read the file every single time the function is called
             df = pd.read_csv(file)
             for col in cols:
                 if col not in df.columns:
@@ -106,16 +108,21 @@ with tab_entry:
         delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place.", 10, 1200, 300, help="What do you think is the gap between the fastest and slowest rider?")
         
         if st.form_submit_button("Submit Entry"):
-            if not name or is_inappropriate(name): st.error("Please enter a valid, constructive name.")
-            else:
-                df = load_data(DATA_FILE, ["Name", "FTP (W)", "Segment Time (s)", "Delta_Estimate", "Date"])
-                new_entry = pd.DataFrame([{"Name": name, "FTP (W)": ftp, "Segment Time (s)": time, 
-                                           "Delta_Estimate": delta_est, "Date": datetime.now().strftime("%Y-%m-%d")}])
-                df = pd.concat([df[df["Name"] != name], new_entry], ignore_index=True)
-                df.to_csv(DATA_FILE, index=False)
-                st.success("Entry saved!")
-                st.rerun()
-
+        if not name: 
+            st.error("Name is required!")
+        else:
+            # Load current state
+            df = load_data(DATA_FILE, ["Name", "FTP (W)", "Segment Time (s)", "Delta_Estimate", "Date"])
+            # Create new entry
+            new_entry = pd.DataFrame([{"Name": name, "FTP (W)": ftp, "Segment Time (s)": time, 
+                                       "Delta_Estimate": delta_est, "Date": datetime.now().strftime("%Y-%m-%d")}])
+            # Merge and Save
+            df = pd.concat([df[df["Name"] != name], new_entry], ignore_index=True)
+            df.to_csv(DATA_FILE, index=False)
+            
+            st.success("Entry saved!")
+            st.rerun() # This forces the entire app to reload and hit load_data() again
+                
 with tab_seed:
     st.header("Seeding Order")
     df = load_data(DATA_FILE, ["Name", "FTP (W)", "Date"])
