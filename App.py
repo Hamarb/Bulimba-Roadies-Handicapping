@@ -8,6 +8,7 @@ from google.oauth2.service_account import Credentials
 
 st.set_page_config(page_title="Welcome to the Bulimba Roadies Monthly Challenge", page_icon="🚴‍♂️", layout="wide")
 
+# --- GOOGLE SHEETS SETUP VIA GSPREAD ---
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
@@ -84,14 +85,6 @@ def get_segment_url():
             return str(valid_urls.iloc[-1])
     return "https://www.strava.com/segments/22270858"
 
-def is_inappropriate(text):
-    bad_words = ["rude", "badword1", "badword2"] 
-    return any(word in text.lower() for word in bad_words)
-
-def format_time(sec):
-    m, s = int(sec // 60), int(sec % 60)
-    return f"0:{m:02d}:{s:02d}"
-
 def load_faq_data():
     """Loads FAQ data from the 'FAQ' worksheet."""
     expected_columns = ["Question", "Answer"]
@@ -116,7 +109,15 @@ def save_faq_data(df):
         sheet.update([df.columns.values.tolist()] + df.values.tolist())
     except Exception as e:
         st.error(f"Failed to save FAQ data: {e}")
-        
+
+def is_inappropriate(text):
+    bad_words = ["rude", "badword1", "badword2"] 
+    return any(word in text.lower() for word in bad_words)
+
+def format_time(sec):
+    m, s = int(sec // 60), int(sec % 60)
+    return f"0:{m:02d}:{s:02d}"
+
 SEGMENT_URL = get_segment_url()
 st.title("🚴‍♂️ Bulimba Roadies - Monthly Challenge")
 
@@ -127,14 +128,37 @@ tab_inst, tab_entry, tab_seed, tab_res, tab_faq, tab_admin = st.tabs(
 
 with tab_inst:
     st.info("Disclaimer: This application is a casual social experiment. Participation is entirely voluntary, and no one involved in the creation, hosting, or management of this app is legally or financially accountable for any outcomes, incidents, or errors.")
+    
     with st.expander("ℹ️ How is my handicap calculated?"):
         st.markdown("""
-        Your handicap is dynamically calculated using a community-voted **Delta** (the estimated gap between the fastest and slowest rider). 
+        ### 🚴‍♂️ How Dynamic Handicapping Works
+        Our club handicap system is fully dynamic, meaning it adapts automatically based on who turns up to ride and what the group collectively expects the pace gap to be.
         
-        * **Fastest riders** receive a larger handicap penalty.
-        * **Slowest riders** receive a fair baseline slice of the handicap.
-        * **Your Adjusted Time** = Your Actual Time + Your Handicap. 
+        Instead of rigid, hard-coded start times, every handicap is calculated through four simple steps:
+        
+        1. **The Group Delta Estimate (Community Powered)** To submit actual times for each challenge, everyone also provides a personal estimate of the Delta (the time gap in seconds between the fastest and slowest rider). We take the average of all submissions to create our official Group Estimated Delta.
+           
+        2. **Seeding from Fastest to Slowest** Using your submitted FTP, participants are sorted from lowest to highest. Your FTP isn't the competition; it is used to allocate your handicap relative to all participants. 
+           
+        3. **The Inclusive Handicap Curve** Everyone receives a calculated handicap designed to level the playing field. The person with the highest FTP receives the maximum handicap penalty (the full Group Estimated Delta). Every other rider receives a scaled handicap based on their position in the field.  
+           The person with the lowest FTP still receives a handicap (Group Estimated Delta divided by the total participant count), ensuring no one sits at zero and the exact same formula applies equally to all members.
+           
+        4. **The Adjusted Finish** Your official adjusted time is calculated by adding your calculated handicap to your actual segment time:
+           $$\\text{Adjusted Time} = \\text{Actual Time} + \\text{Handicap}$$
+           The rider with the fastest adjusted time takes the win!
+
+        ---
+
+        ### 📊 Quick Comparison: Standard vs. Dynamic
+
+        | Feature | Traditional Handicapping | Bulimba Roadies Dynamic System |
+        | :--- | :--- | :--- |
+        | **The Baseline** | Fixed historical times | Changes weekly based on who shows up |
+        | **The Gap (Delta)** | Set by an admin | Voted on collectively by the participants |
+        | **The Slowest Rider** | Gets zero head start (Scratch) | Gets an inclusive baseline handicap slice |
+        | **Fairness** | Rigid and prone to outdated metrics | Self-correcting and community-driven |
         """)
+        
     st.markdown(f"**The active challenge segment is:** [{SEGMENT_URL}]({SEGMENT_URL})")
     st.markdown("All submitted participant data is securely stored via Google Sheets.")
 
@@ -224,19 +248,16 @@ with tab_res:
 with tab_faq:
     st.header("Frequently Asked Questions")
     
-    # Load FAQ data from Google Sheets
     faq_df = load_faq_data()
     
     if not faq_df.empty:
         for _, row in faq_df.iterrows():
-            # Ensure it doesn't fail if blank rows exist
             if str(row["Question"]).strip():
                 with st.expander(str(row["Question"])): 
                     st.write(str(row["Answer"]))
     else:
         st.info("No FAQs available yet.")
-    
-    # New Question Submission
+        
     st.markdown("---")
     q = st.text_input("Submit a question:")
     
@@ -250,13 +271,10 @@ with tab_faq:
         else:
             new_q = pd.DataFrame([{"Question": q, "Answer": "Response pending"}])
             faq_df = pd.concat([faq_df, new_q], ignore_index=True)
-            
-            # Save permanently to Google Sheets
             save_faq_data(faq_df)
-            
             st.success("Question submitted! It will appear here once reviewed.")
             st.rerun()
-            
+
 with tab_admin:
     if st.checkbox("Show Admin Segment Controls"):
         st.header("Admin Configuration & Submitter Tracking")
