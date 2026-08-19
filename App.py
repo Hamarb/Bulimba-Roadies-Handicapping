@@ -280,6 +280,3 @@ with tab_admin:
                 st.rerun()
         else:
             # Button is disabled/hidden if not checked
-            st.button("🚨 PERMANENTLY RESET DATA", disabled=True)
-                if os.path.exists(HISTORY_FILE): os.remove(HISTORY_FILE)
-                    st.rerun()
