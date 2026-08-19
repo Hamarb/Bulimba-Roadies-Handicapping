@@ -214,7 +214,8 @@ with tab_res:
         avg_delta = active["Delta_Estimate"].mean()
         st.markdown(f"**Current average delta:** {int(avg_delta)} seconds.")
         
-        active = active.sort_values(by="Segment Time (s)").reset_index(drop=True)
+        # Sort by FTP first. If FTP is identical, sort by Segment Time or Name so it's deterministic.
+        active = active.sort_values(by=["FTP (W)", "Segment Time (s)"], ascending=[True, True]).reset_index(drop=True)
         count = len(active)
         
         base_slice = avg_delta / count
