@@ -229,35 +229,39 @@ with tab_faq:
             st.rerun()
             
 with tab_admin:
-    st.header("Admin Configuration")
-    
-    if 'url_updated' not in st.session_state:
-        st.session_state.url_updated = False
-
-    new_url = st.text_input("Active Challenge Segment URL - Type the full Strava URL and click the button below to apply changes.", value=SEGMENT_URL)
-    
-    if st.button("Update Segment URL"):
-        save_segment_url(new_url)
-        log_url_history(new_url)  # Log to history
-        st.session_state.url_updated = True
-        st.rerun()
-
-    if st.session_state.url_updated:
-        st.success("Segment URL updated across the app!")
-        st.session_state.url_updated = False
-
-    # --- URL HISTORY TABLE ---
-    st.subheader("Recent URL History")
-    if os.path.exists(HISTORY_FILE):
-        history_df = pd.read_csv(HISTORY_FILE).sort_values(by="Date", ascending=False)
-        st.dataframe(history_df.head(10), use_container_width=True, hide_index=True)
-    else:
-        st.write("No history available.")
-
-    st.markdown("---")
     if st.checkbox("Show Admin Reset Controls"):
-        st.warning("This will delete all current challenge data.")
-        if st.button("🚨 PERMANENTLY RESET DATA"):
-            if os.path.exists(DATA_FILE): os.remove(DATA_FILE)
-            if os.path.exists(HISTORY_FILE): os.remove(HISTORY_FILE)
+        st.markdown("---")
+        st.header("Admin Configuration")
+        
+        if 'url_updated' not in st.session_state:
+            st.session_state.url_updated = False
+    
+        new_url = st.text_input("Active Challenge Segment URL - Paste the full Strava URL and click the button below to apply changes.", value=SEGMENT_URL)
+        
+        if st.button("Update Segment URL"):
+            save_segment_url(new_url)
+            log_url_history(new_url)  # Log to history
+            st.session_state.url_updated = True
             st.rerun()
+    
+        if st.session_state.url_updated:
+            st.success("Segment URL updated across the app!")
+            st.session_state.url_updated = False
+    
+        # --- URL HISTORY TABLE ---
+        st.subheader("Recent URL History")
+        if os.path.exists(HISTORY_FILE):
+            history_df = pd.read_csv(HISTORY_FILE).sort_values(by="Date", ascending=False)
+            st.dataframe(history_df.head(10), use_container_width=True, hide_index=True)
+        else:
+            st.write("No history available.")
+    
+        if st.checkbox("Show Admin Reset Controls"):
+            if os.path.exists(FAQ_FILE):
+                with open(FAQ_FILE, "rb") as f:
+                st.download_button("Download current FAQ data", f, "faq_data.csv")
+            st.warning("This will delete all current challenge data.")
+            if st.button("🚨 PERMANENTLY RESET DATA"):
+                if os.path.exists(DATA_FILE): os.remove(DATA_FILE)
+                if os.path.exists(HISTORY_FILE): os.remove(HISTORY_FILE)
+                st.rerun()
