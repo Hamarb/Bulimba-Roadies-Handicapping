@@ -142,7 +142,7 @@ with tab_res:
         avg_delta = active["Delta_Estimate"].mean()
         
         # Display the Delta metric at the top of the tab
-        st.metric("Current average delta based on the inputs provided by all participants =", f"{int(avg_delta)} seconds")
+        st.markdown(f"**Current average delta based on the inputs provided by all participants:** {int(avg_delta)} seconds")
         
         active = active.sort_values(by="Segment Time (s)").reset_index(drop=True)
         count = len(active)
