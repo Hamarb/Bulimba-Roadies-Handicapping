@@ -89,6 +89,7 @@ with tab2:
                     df = pd.concat([df, new], ignore_index=True)
                 df.to_csv(DATA_FILE, index=False)
                 st.success("Entry saved!")
+                st.rerun()
 
     # --- LOCKED ADMIN ZONE ---
     st.markdown("---")
