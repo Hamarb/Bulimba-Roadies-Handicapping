@@ -259,8 +259,27 @@ with tab_admin:
             with open(FAQ_FILE, "rb") as f:
                 st.download_button("Download current FAQ", f, "faq_data.csv")
         
-        if st.button("🚨 Permanently Reset Data"):
-            st.warning("This will delete all current challenge data.")
-            if os.path.exists(DATA_FILE): os.remove(DATA_FILE)
-            if os.path.exists(HISTORY_FILE): os.remove(HISTORY_FILE)
-            st.rerun()
+        st.markdown("---")
+        st.subheader("⚠️ Danger Zone")
+        
+        # 1. Require a confirmation checkbox first
+        confirm_reset = st.checkbox("I understand this will delete ALL challenge data.")
+        
+        # 2. Only show the button if the checkbox is checked
+        if confirm_reset:
+            if st.button("🚨 PERMANENTLY RESET DATA"):
+                # Execute deletion
+                if os.path.exists(DATA_FILE):
+                    os.remove(DATA_FILE)
+                if os.path.exists(HISTORY_FILE):
+                    os.remove(HISTORY_FILE)
+                if os.path.exists(CONFIG_FILE):
+                    os.remove(CONFIG_FILE)
+                
+                st.success("Data deleted successfully.")
+                st.rerun()
+        else:
+            # Button is disabled/hidden if not checked
+            st.button("🚨 PERMANENTLY RESET DATA", disabled=True)
+                if os.path.exists(HISTORY_FILE): os.remove(HISTORY_FILE)
+                st.rerun()
