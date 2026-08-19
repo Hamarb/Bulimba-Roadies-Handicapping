@@ -113,10 +113,10 @@ with tab_faq:
 
 with tab_admin:
     st.header("Admin Configuration")
-    st.markdown("All submitted data is stored for 45 days. Data deletion is automated via a backend workflow.")
-    st.text_input("Active Challenge Segment URL", value=SEGMENT_URL, disabled=True)
     
-    if st.checkbox("Show Admin Reset Controls"):
+    if st.checkbox("Show Admin Controls"):
+        st.text_input("Active Challenge Segment URL", value=SEGMENT_URL, disabled=True)
+        st.markdown("All submitted data is stored for 45 days. Data deletion is automated via a backend workflow.")
         st.warning("This will delete all current challenge data.")
         if st.button("🚨 PERMANENTLY RESET DATA"):
             if os.path.exists(DATA_FILE):
