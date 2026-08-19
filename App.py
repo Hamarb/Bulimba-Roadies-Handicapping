@@ -38,17 +38,17 @@ tab_inst, tab_entry, tab_seed, tab_res, tab_faq, tab_admin = st.tabs(
 with tab_inst:
     # st.header("Welcome to the Bulimba Roadies Handicap Challenge!")
     st.info("Disclaimer: This application is a casual social experiment. Participation is entirely voluntary, and no one involved in the creation, hosting, or management of this app is legally or financially accountable for any outcomes, incidents, or errors. AI-generated elements and handicap calculations may include mistakes—use your best judgment and ride safely!")
-    st.markdown(f"**The official Challenge segment is:** [{SEGMENT_URL}]({SEGMENT_URL})")
+    st.markdown(f"**The active challenge segment is:** [{SEGMENT_URL}]({SEGMENT_URL})")
     st.markdown("All submitted data is stored for 45 days. Data deletion is automated via a backend workflow.")
 
 with tab_entry:
     st.header("Data Entry")
-    st.markdown(f"**Challenge Segment:** [{SEGMENT_URL}]({SEGMENT_URL})")
+    st.markdown(f"**Active Challenge Segment:** [{SEGMENT_URL}]({SEGMENT_URL})")
     with st.form("entry_form", clear_on_submit=True):
         name = st.text_input("Firstname Lastname")
         ftp = st.number_input("Current FTP (Watts). The amount of power you can sustain for 20 minutes.", 0, 500, 100, help="This is used to create the seeding or order of participants. The data that you enter will be visible to other participants.")
-        time = st.number_input("Your actual completion time for the segment (in seconds). This should come from Strava", 60, 3600, 400)
-        delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place", 10, 1200, 300, help="What do you think is the gap between the fastest and slowest rider?")
+        time = st.number_input("Your actual completion time for the segment (in seconds). This should come from Strava.", 60, 3600, 400)
+        delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place.", 10, 1200, 300, help="What do you think is the gap between the fastest and slowest rider?")
         
         if st.form_submit_button("Submit Entry"):
             if not name: st.error("Name is required!")
@@ -95,7 +95,7 @@ with tab_res:
             summary = f"### 🏆 Monthly Challenge Summary\n**Period:** {datetime.now().strftime('%m/%Y')}\n\n| Place | Name | Actual Time | Handicap | Adjusted Time |\n| :--- | :--- | :--- | :--- | :--- |\n"
             for _, row in display.iterrows():
                 summary += f"| {row['Place']} | {row['Name']} | {row['Actual Time']} | {row['Handicap']} | {row['Adjusted Time']} |\n"
-            summary += f"\nCheck out the Challenge segment details here: {SEGMENT_URL}"
+            summary += f"\nCheck out the active challenge segment details here: {SEGMENT_URL}"
             st.code(summary, language="markdown")
     else:
         st.info("No data available.")
