@@ -11,6 +11,18 @@ FAQ_FILE = "faq_data.csv"
 CONFIG_FILE = "config.csv"
 HISTORY_FILE = "url_history.csv"
 
+def enforce_retention(file):
+    if os.path.exists(file):
+        df = pd.read_csv(file)
+        if 'Date' in df.columns:
+            df['Date'] = pd.to_datetime(df['Date'])
+            cutoff = datetime.now() - timedelta(days=45)
+            df_cleaned = df[df['Date'] >= cutoff]
+            if len(df_cleaned) < len(df):
+                df_cleaned.to_csv(file, index=False)
+
+enforce_retention(DATA_FILE)
+
 def get_segment_url():
     if os.path.exists(CONFIG_FILE):
         try: return pd.read_csv(CONFIG_FILE).iloc[0]["URL"]
