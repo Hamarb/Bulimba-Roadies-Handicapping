@@ -1,14 +1,16 @@
 import streamlit as st
 import pandas as pd
 import os
-import gspread
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+import gspread
 from google.oauth2.service_account import Credentials
 
 st.set_page_config(page_title="Welcome to the Bulimba Roadies Monthly Challenge", page_icon="🚴‍♂️", layout="wide")
 
-# --- GOOGLE SHEETS SETUP VIA GSPREAD ---
+# --- FILE CONFIG & GOOGLE SHEETS SETUP ---
+FAQ_FILE = "faq_data.csv"
+
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
@@ -19,15 +21,8 @@ def init_connection():
     creds_dict = dict(st.secrets["gcp_service_account"])
     creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
     client = gspread.authorize(creds)
-    # Open the spreadsheet by URL from your secrets
     spreadsheet_url = st.secrets["connections"]["gsheets"]["spreadsheet"]
     return client.open_by_url(spreadsheet_url)
-    
-# --- FILE CONFIG & CONNECTIONS ---
-FAQ_FILE = "faq_data.csv"
-
-# Establish Google Sheets connection
-conn = st.connection("gsheets", type=GSheetsConnection)
 
 def load_data():
     """Loads the main challenge data from the 'Entries' worksheet."""
@@ -84,7 +79,7 @@ def save_segment_submission(admin_name, url):
         return False
 
 def get_segment_url():
-    """Retrieves the latest active segment URL from Google Sheets."""
+    """Retrieves the latest active segment URL from the Google Sheet."""
     segment_df = get_segment_data()
     if not segment_df.empty and "Segment URL" in segment_df.columns:
         valid_urls = segment_df["Segment URL"].dropna()
@@ -109,7 +104,7 @@ tab_inst, tab_entry, tab_seed, tab_res, tab_faq, tab_admin = st.tabs(
 )
 
 with tab_inst:
-    st.info("Disclaimer: This application is a casual social experiment. Participation is entirely voluntary, and no one involved in the creation, hosting, or management of this app is legally or financially accountable for any outcomes, incidents, or errors. AI-generated elements and handicap calculations may include mistakes—use your best judgment and ride safely!")
+    st.info("Disclaimer: This application is a casual social experiment. Participation is entirely voluntary, and no one involved in the creation, hosting, or management of this app is legally or financially accountable for any outcomes, incidents, or errors.")
     with st.expander("ℹ️ How is my handicap calculated?"):
         st.markdown("""
         Your handicap is dynamically calculated using a community-voted **Delta** (the estimated gap between the fastest and slowest rider). 
@@ -117,8 +112,6 @@ with tab_inst:
         * **Fastest riders** receive a larger handicap penalty.
         * **Slowest riders** receive a fair baseline slice of the handicap.
         * **Your Adjusted Time** = Your Actual Time + Your Handicap. 
-        
-        Everyone is measured on the exact same mathematical model!
         """)
     st.markdown(f"**The active challenge segment is:** [{SEGMENT_URL}]({SEGMENT_URL})")
     st.markdown("All submitted participant data is securely stored via Google Sheets.")
@@ -128,9 +121,9 @@ with tab_entry:
     st.markdown(f"**Active Challenge Segment:** [{SEGMENT_URL}]({SEGMENT_URL})")
     with st.form("entry_form", clear_on_submit=True):
         name = st.text_input("Firstname Lastname")
-        ftp = st.number_input("Current FTP (Watts). The amount of power you can sustain for 20 minutes.", 0, 500, 100, help="This is used to create the seeding or order of participants. The data that you enter will be visible to other participants.")
-        time = st.number_input("Your actual completion time for the segment (in seconds). This should come from Strava.", 60, 3600, 400)
-        delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place.", 10, 1200, 300, help="What do you think is the gap between the fastest and slowest rider?")
+        ftp = st.number_input("Current FTP (Watts)", 0, 500, 100, help="Sustained 20-minute power output.")
+        time = st.number_input("Your actual completion time for the segment (in seconds).", 60, 3600, 400)
+        delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place.", 10, 1200, 300)
         
         if st.form_submit_button("Submit Entry"):
             if not name.strip(): 
@@ -149,7 +142,6 @@ with tab_entry:
                     "Date": today_str
                 }])
                 
-                # Merge and Save back to Google Sheets
                 df = pd.concat([df[df["Name"] != name], new_entry], ignore_index=True)
                 save_data(df)
                 
@@ -172,13 +164,11 @@ with tab_res:
     
     if not active.empty:
         avg_delta = active["Delta_Estimate"].mean()
-        
-        st.markdown(f"**Current average delta based on the inputs provided by all participants:** {int(avg_delta)} seconds! This number gets divided by the number of participants and then multiplied by your relative position in the seeding table.")
+        st.markdown(f"**Current average delta:** {int(avg_delta)} seconds.")
         
         active = active.sort_values(by="Segment Time (s)").reset_index(drop=True)
         count = len(active)
         
-        # Handicap Logic
         base_slice = avg_delta / count
         handicaps = []
         for i in range(count):
@@ -211,8 +201,6 @@ with tab_res:
 
 with tab_faq:
     st.header("Frequently Asked Questions")
-    
-    faq_df = load_data() # Falls back gracefully if columns differ, or read your FAQ CSV
     if os.path.exists(FAQ_FILE):
         faq_df = pd.read_csv(FAQ_FILE)
     else:
@@ -236,14 +224,12 @@ with tab_faq:
             new_q = pd.DataFrame([{"Question": q, "Answer": "Response pending"}])
             faq_df = pd.concat([faq_df, new_q], ignore_index=True)
             faq_df.to_csv(FAQ_FILE, index=False)
-            st.success("Question submitted! It will appear here once reviewed.")
+            st.success("Question submitted!")
             st.rerun()
 
 with tab_admin:
-    if st.checkbox("Show Admin Segment & Reset Controls"):
+    if st.checkbox("Show Admin Segment Controls"):
         st.header("Admin Configuration & Submitter Tracking")
-        
-        # Pull latest URL history from Google Sheets 'Segment' tab
         segment_df = get_segment_data()
         
         with st.form("segment_config_form"):
@@ -262,7 +248,6 @@ with tab_admin:
                         st.success(f"Segment updated and logged successfully by {admin_name}!")
                         st.rerun()
         
-        # --- SEGMENT URL HISTORY TABLE ---
         st.subheader("Segment Configuration History")
         if not segment_df.empty:
             st.dataframe(segment_df.sort_values(by="Date", ascending=False).head(10), use_container_width=True, hide_index=True)
@@ -272,16 +257,3 @@ with tab_admin:
         if os.path.exists(FAQ_FILE):
             with open(FAQ_FILE, "rb") as f:
                 st.download_button("Download current FAQ", f, "faq_data.csv")
-            
-        st.markdown("---")
-        st.subheader("⚠️ Danger Zone")
-        
-        confirm_reset = st.checkbox("I understand this will clear local cache/configs.")
-        if confirm_reset:
-            if st.button("🚨 PERMANENTLY RESET LOCAL CONFIG"):
-                if os.path.exists(FAQ_FILE):
-                    os.remove(FAQ_FILE)
-                st.success("Local cache cleared.")
-                st.rerun()
-        else:
-            st.button("🚨 PERMANENTLY RESET LOCAL CONFIG", disabled=True)
