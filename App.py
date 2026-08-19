@@ -12,8 +12,16 @@ SEGMENT_URL = "https://www.strava.com/segments/22270858"
 
 def load_data(file, cols):
     if os.path.exists(file):
-        try: return pd.read_csv(file)
-        except: pass
+        try:
+            df = pd.read_csv(file)
+            # Check if all required columns are present. If not, add them.
+            for col in cols:
+                if col not in df.columns:
+                    df[col] = 0 if col not in ["Name", "Date"] else ""
+            return df
+        except Exception:
+            return pd.DataFrame(columns=cols)
+    # If file doesn't exist, return an empty DataFrame with the correct columns
     return pd.DataFrame(columns=cols)
 
 def format_time(sec):
