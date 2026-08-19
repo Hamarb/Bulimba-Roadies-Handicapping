@@ -92,7 +92,7 @@ def process_club_handicaps(club_id, segment_id):
     # Dynamic Handicap Allocation
     handicaps = [round(delta * (i / (count - 1))) if count > 1 else 0.0 for i in range(count)]
     df['Handicap_Sec'] = handicaps
-    df['Adjusted_Sec'] = df['actual_time_sec'] + df['Handicap_Sec']
+    df['Adjusted_Sec'] = df['actual_time_sec'] - df['Handicap_Sec']
     
     df.to_csv("bulimba_roadies_latest.csv", index=False)
     print(f"Successfully processed {count} riders.")
