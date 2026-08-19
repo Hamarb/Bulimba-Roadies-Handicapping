@@ -214,15 +214,18 @@ with tab_res:
         avg_delta = active["Delta_Estimate"].mean()
         st.markdown(f"**Current average delta:** {int(avg_delta)} seconds.")
         
-        # Sort by FTP first. If FTP is identical, sort by Segment Time or Name so it's deterministic.
+        # Sort by FTP and Segment Time to ensure stable ordering
         active = active.sort_values(by=["FTP (W)", "Segment Time (s)"], ascending=[True, True]).reset_index(drop=True)
         count = len(active)
         
         base_slice = avg_delta / count
         handicaps = []
+        
         for i in range(count):
             if count > 1:
-                h = (avg_delta - base_slice) * (1 - (i / (count - 1))) + base_slice
+                # Invert the curve: Index 0 (lowest FTP / slowest expected) gets the smallest handicap/head start, 
+                # while index count-1 (highest FTP / fastest expected) gets the largest handicap penalty.
+                h = base_slice + (avg_delta - base_slice) * (i / (count - 1))
             else:
                 h = 0.0
             handicaps.append(round(h))
