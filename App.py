@@ -197,15 +197,37 @@ with tab_res:
 
 with tab_faq:
     st.header("Frequently Asked Questions")
-    faq_df = load_data(FAQ_FILE, ["Question", "Answer"])
-    for _, row in faq_df.iterrows():
-        with st.expander(row["Question"]): st.write(row["Answer"])
     
+    # 1. Load existing FAQ data
+    faq_df = load_data(FAQ_FILE, ["Question", "Answer"])
+    
+    # 2. Display existing FAQ entries
+    for _, row in faq_df.iterrows():
+        with st.expander(row["Question"]): 
+            st.write(row["Answer"])
+    
+    # 3. New Question Submission
+    st.markdown("---")
     q = st.text_input("Submit a question:")
+    
     if st.button("Submit Question"):
-        if is_inappropriate(q): st.error("Keep it constructive.")
-        else: st.success("Question submitted for review.")
-
+        if not q.strip():
+            st.error("Question cannot be empty.")
+        elif is_inappropriate(q):
+            st.error("Keep it constructive.")
+        elif q in faq_df["Question"].values:
+            st.warning("This question has already been submitted.")
+        else:
+            # Prepare new row
+            new_q = pd.DataFrame([{"Question": q, "Answer": "Response pending"}])
+            
+            # Combine and save
+            faq_df = pd.concat([faq_df, new_q], ignore_index=True)
+            faq_df.to_csv(FAQ_FILE, index=False)
+            
+            st.success("Question submitted! It will appear here once reviewed.")
+            st.rerun()
+            
 with tab_admin:
     st.header("Admin Configuration")
     
