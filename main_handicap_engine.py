@@ -28,7 +28,12 @@ def fetch_from_strava(club_id, segment_id):
     headers = {'Authorization': f'Bearer {access_token}'}
     url = f"https://www.strava.com/api/v3/clubs/{club_id}/activities?per_page=200"
     response = requests.get(url, headers=headers)
-    if response.status_code != 200: return []
+    print(f"DEBUG: Strava API Response Code: {response.status_code}")
+    if response.status_code == 200:
+        activities = response.json()
+        print(f"DEBUG: Fetched {len(activities)} activities from Strava.")
+    else:
+        print(f"DEBUG: API Error Details: {response.text}")
 
     club_efforts = []
     for activity in response.json():
