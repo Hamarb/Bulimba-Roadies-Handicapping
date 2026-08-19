@@ -1,12 +1,28 @@
 import streamlit as st
 import pandas as pd
 import os
+import gspread
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
-from streamlit_gsheets import GSheetsConnection
+from google.oauth2.service_account import Credentials
 
 st.set_page_config(page_title="Welcome to the Bulimba Roadies Monthly Challenge", page_icon="🚴‍♂️", layout="wide")
 
+# --- GOOGLE SHEETS SETUP VIA GSPREAD ---
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+]
+
+def init_connection():
+    """Initializes gspread client using Streamlit Secrets."""
+    creds_dict = dict(st.secrets["gcp_service_account"])
+    creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+    client = gspread.authorize(creds)
+    # Open the spreadsheet by URL from your secrets
+    spreadsheet_url = st.secrets["connections"]["gsheets"]["spreadsheet"]
+    return client.open_by_url(spreadsheet_url)
+    
 # --- FILE CONFIG & CONNECTIONS ---
 FAQ_FILE = "faq_data.csv"
 
@@ -14,11 +30,14 @@ FAQ_FILE = "faq_data.csv"
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def load_data():
-    """Loads the main challenge data directly from Google Sheets ('Entries' tab)."""
+    """Loads the main challenge data from the 'Entries' worksheet."""
     expected_columns = ["Name", "FTP (W)", "Segment Time (s)", "Delta_Estimate", "Segment", "Date"]
     try:
-        df = conn.read(worksheet="Entries", ttl=0)
-        df = df.dropna(how="all")
+        sheet = init_connection().worksheet("Entries")
+        data = sheet.get_all_records()
+        df = pd.DataFrame(data)
+        if df.empty:
+            return pd.DataFrame(columns=expected_columns)
         for col in expected_columns:
             if col not in df.columns:
                 df[col] = 0 if col not in ["Name", "Segment", "Date"] else ""
@@ -27,15 +46,23 @@ def load_data():
         return pd.DataFrame(columns=expected_columns)
 
 def save_data(df):
-    """Saves the main challenge dataframe back to Google Sheets ('Entries' tab)."""
-    conn.update(worksheet="Entries", data=df)
+    """Saves the dataframe back to the 'Entries' worksheet."""
+    try:
+        sheet = init_connection().worksheet("Entries")
+        sheet.clear()
+        sheet.update([df.columns.values.tolist()] + df.values.tolist())
+    except Exception as e:
+        st.error(f"Failed to save data: {e}")
 
 def get_segment_data():
-    """Fetches segment history from the 'Segment' tab of the Google Sheet."""
+    """Fetches segment configuration history from the 'Segment' worksheet."""
     expected_columns = ["Firstname Lastname", "Segment URL", "Date"]
     try:
-        df = conn.read(worksheet="Segment", ttl=0)
-        df = df.dropna(how="all")
+        sheet = init_connection().worksheet("Segment")
+        data = sheet.get_all_records()
+        df = pd.DataFrame(data)
+        if df.empty:
+            return pd.DataFrame(columns=expected_columns)
         for col in expected_columns:
             if col not in df.columns:
                 df[col] = ""
@@ -44,19 +71,13 @@ def get_segment_data():
         return pd.DataFrame(columns=expected_columns)
 
 def save_segment_submission(admin_name, url):
-    """Appends submitter name, segment URL, and timestamp to the 'Segment' tab."""
+    """Appends submitter name, segment URL, and timestamp to the 'Segment' worksheet."""
     try:
         brisbane_tz = ZoneInfo("Australia/Brisbane")
         now_brisbane = datetime.now(brisbane_tz).strftime("%Y-%m-%d %H:%M:%S")
         
-        df = get_segment_data()
-        new_row = pd.DataFrame([{
-            "Firstname Lastname": admin_name,
-            "Segment URL": url,
-            "Date": now_brisbane
-        }])
-        df = pd.concat([df, new_row], ignore_index=True)
-        conn.update(worksheet="Segment", data=df)
+        sheet = init_connection().worksheet("Segment")
+        sheet.append_row([admin_name, url, now_brisbane])
         return True
     except Exception as e:
         st.error(f"Failed to save segment submission: {e}")
