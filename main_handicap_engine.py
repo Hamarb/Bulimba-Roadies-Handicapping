@@ -89,4 +89,4 @@ def process_club_handicaps(club_id, segment_id):
     print(f"Successfully processed {count} riders.")
 
 if __name__ == "__main__":
-    process_club_handicaps("224169", "41151160")
+    process_club_handicaps("1095722", "41151160")
