@@ -9,10 +9,17 @@ st.set_page_config(page_title="Bulimba Roadies Handicapping", page_icon="🚴‍
 DATA_FILE = "manual_entries.csv"
 
 def load_data():
+    expected_columns = ["Name", "FTP (W)", "Segment Time (s)"]
     if os.path.exists(DATA_FILE):
-        return pd.read_csv(DATA_FILE)
-    # Default structure if no file exists
-    return pd.DataFrame(columns=["Name", "FTP (W)", "Segment Time (s)"])
+        try:
+            df = pd.read_csv(DATA_FILE)
+            # Check if columns are missing
+            if not all(col in df.columns for col in expected_columns):
+                return pd.DataFrame(columns=expected_columns)
+            return df
+        except Exception:
+            return pd.DataFrame(columns=expected_columns)
+    return pd.DataFrame(columns=expected_columns)
 
 def format_time(sec):
     m = int(sec // 60)
