@@ -147,10 +147,25 @@ with tab_res:
         active = active.sort_values(by="Segment Time (s)").reset_index(drop=True)
         count = len(active)
         
-        # Handicap Logic using the calculated avg_delta
-        handicaps = [round(avg_delta * (1 - (i / (count - 1)))) if count > 1 else 0 for i in range(count)]
+        # --- NEW DYNAMIC HANDICAP LOGIC ---
+        # 1. Calculate the base slice for the slowest rider
+        base_slice = avg_delta / count
+        
+        # 2. Calculate handicaps: Fastest (i=0) gets full delta, Slowest (i=count-1) gets base_slice
+        handicaps = []
+        for i in range(count):
+            if count > 1:
+                h = (avg_delta - base_slice) * (1 - (i / (count - 1))) + base_slice
+            else:
+                h = 0.0
+            handicaps.append(round(h))
+            
         active["Handicap_Sec"] = handicaps
+        
+        # 3. Calculate Adjusted Time (Actual Time + Handicap)
         active["Adjusted_Sec"] = active["Segment Time (s)"] + active["Handicap_Sec"]
+        
+        # 4. Sort and Rank
         active = active.sort_values(by="Adjusted_Sec").reset_index(drop=True)
         active["Place"] = active.index + 1
         
