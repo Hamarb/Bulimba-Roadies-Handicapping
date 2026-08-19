@@ -95,6 +95,16 @@ tab_inst, tab_entry, tab_seed, tab_res, tab_faq, tab_admin = st.tabs(
 
 with tab_inst:
     st.info("Disclaimer: This application is a casual social experiment. Participation is entirely voluntary, and no one involved in the creation, hosting, or management of this app is legally or financially accountable for any outcomes, incidents, or errors. AI-generated elements and handicap calculations may include mistakes—use your best judgment and ride safely!")
+    with st.expander("ℹ️ How is my handicap calculated?"):
+    st.markdown("""
+    Your handicap is dynamically calculated using a community-voted **Delta** (the estimated gap between the fastest and slowest rider today). 
+    
+    * **Fastest riders** receive a larger handicap penalty.
+    * **Slowest riders** receive a fair baseline slice of the handicap.
+    * **Your Adjusted Time** = Your Actual Time + Your Handicap. 
+    
+    Everyone is measured on the exact same mathematical curve!
+    """)
     st.markdown(f"**The active challenge segment is:** [{SEGMENT_URL}]({SEGMENT_URL})")
     st.markdown("All submitted data is stored for 45 days. Data deletion is automated via a backend workflow.")
 
