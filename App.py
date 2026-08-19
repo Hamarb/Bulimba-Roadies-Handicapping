@@ -280,3 +280,4 @@ with tab_admin:
                 st.rerun()
         else:
             # Button is disabled/hidden if not checked
+            st.button("🚨 PERMANENTLY RESET DATA", disabled=True)
