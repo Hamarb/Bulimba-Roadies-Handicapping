@@ -99,7 +99,7 @@ if not active_riders.empty:
             summary_markdown += f"| {row['Place']} | {row['Name']} | {row['Actual Time']} | {row['Handicap']} | {row['Adjusted Time']} |\n"
         
         st.markdown(summary_markdown)
-        st.info("👆 Copy the following text block for your Facebook post:")
+        st.info("👆 Copy the following text block for a Facebook post:")
         st.code(summary_markdown, language="markdown")
 else:
     st.info("No times submitted yet. Be the first to enter your data!")
