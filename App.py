@@ -3,7 +3,7 @@ import pandas as pd
 import os
 from datetime import datetime
 
-st.set_page_config(page_title="Bulimba Roadies Challenge", page_icon="🚴‍♂️", layout="wide")
+st.set_page_config(page_title="Welcome to the Bulimba Roadies Monthly Challenge", page_icon="🚴‍♂️", layout="wide")
 
 # --- FILE CONFIG ---
 DATA_FILE = "manual_entries.csv"
@@ -28,7 +28,7 @@ def format_time(sec):
     m, s = int(sec // 60), int(sec % 60)
     return f"0:{m:02d}:{s:02d}"
 
-st.title("🚴‍♂️ Bulimba Roadies - Dynamic Handicapping Challenge")
+st.title("🚴‍♂️ Bulimba Roadies - Monthly Challenge")
 
 # --- TABS ---
 tab_inst, tab_entry, tab_seed, tab_res, tab_faq, tab_admin = st.tabs(
@@ -36,7 +36,7 @@ tab_inst, tab_entry, tab_seed, tab_res, tab_faq, tab_admin = st.tabs(
 )
 
 with tab_inst:
-    st.header("Welcome to the Bulimba Roadies Handicap Challenge!")
+    # st.header("Welcome to the Bulimba Roadies Handicap Challenge!")
     st.info("Disclaimer: This application is a casual social experiment. Participation is entirely voluntary, and no one involved in the creation, hosting, or management of this app is legally or financially accountable for any outcomes, incidents, or errors. AI-generated elements and handicap calculations may include mistakes—use your best judgment and ride safely!")
     st.markdown(f"**The official Challenge segment is:** [{SEGMENT_URL}]({SEGMENT_URL})")
     st.markdown("All submitted data is stored for 45 days. Data deletion is automated via a backend workflow.")
@@ -45,10 +45,10 @@ with tab_entry:
     st.header("Data Entry")
     st.markdown(f"**Challenge Segment:** [{SEGMENT_URL}]({SEGMENT_URL})")
     with st.form("entry_form", clear_on_submit=True):
-        name = st.text_input("Name")
-        ftp = st.number_input("Current FTP (Watts)", 0, 500, 250)
-        time = st.number_input("Segment Time (seconds)", 60, 3600, 400)
-        delta_est = st.number_input("Your Estimated Delta (seconds)", 10, 1200, 300, help="What do you think is the gap between the fastest and slowest rider today?")
+        name = st.text_input("Firstname Lastname")
+        ftp = st.number_input("Current FTP (Watts). The amount of power you can sustain for 20 minutes.", help="This is used to create the seeding or order of participants. The data that you enter will be visible to other participants.", 0, 500, 100)
+        time = st.number_input("Your actual completion time for the segment (in seconds). This should come from Strava", 60, 3600, 400)
+        delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place", 10, 1200, 300, help="What do you think is the gap between the fastest and slowest rider?")
         
         if st.form_submit_button("Submit Entry"):
             if not name: st.error("Name is required!")
