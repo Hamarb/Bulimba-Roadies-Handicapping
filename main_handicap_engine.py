@@ -9,8 +9,6 @@ CLIENT_SECRET = os.environ.get('STRAVA_CLIENT_SECRET')
 REFRESH_TOKEN = os.environ.get('STRAVA_REFRESH_TOKEN')
 
 def get_fresh_token():
-    print(f"DEBUG: Checking Env Vars - Client ID: {bool(CLIENT_ID)}, Refresh Token: {bool(REFRESH_TOKEN)}")
-    
     data = {
         'client_id': CLIENT_ID,
         'client_secret': CLIENT_SECRET,
@@ -18,78 +16,71 @@ def get_fresh_token():
         'refresh_token': REFRESH_TOKEN
     }
     response = requests.post('https://www.strava.com/api/v3/oauth/token', data=data)
-    
     if response.status_code == 200:
         return response.json()['access_token']
-    else:
-        print(f"DEBUG: Token refresh failed. Status: {response.status_code}, Response: {response.text}")
-        return None
+    return None
 
-def fetch_club_segment_efforts(club_id, segment_id):
+def fetch_from_strava(club_id, segment_id):
+    """Helper to perform the actual API call."""
     access_token = get_fresh_token()
-    if not access_token:
-        return []
-        
-    headers = {'Authorization': f'Bearer {access_token}'}
+    if not access_token: return []
     
-    # Increase per_page to 200 to capture more club activities
+    headers = {'Authorization': f'Bearer {access_token}'}
     url = f"https://www.strava.com/api/v3/clubs/{club_id}/activities?per_page=200"
     response = requests.get(url, headers=headers)
-    
-    if response.status_code != 200:
-        print(f"Error fetching club activities: {response.status_code}")
-        return []
+    if response.status_code != 200: return []
 
-    activities = response.json()
     club_efforts = []
-
-    for activity in activities:
-        # Check if the activity is a 'Ride' and has a name/id
-        # Sometimes 'id' is in the activity object
+    for activity in response.json():
         activity_id = activity.get('id')
-        
-        # If no id, skip to next
-        if not activity_id:
-            continue
+        if not activity_id: continue
             
         detail_url = f"https://www.strava.com/api/v3/activities/{activity_id}?include_all_efforts=true"
         detail_resp = requests.get(detail_url, headers=headers)
-        
         if detail_resp.status_code == 200:
-            activity_details = detail_resp.json()
-            # Loop through efforts to find our segment
-            for effort in activity_details.get('segment_efforts', []):
+            for effort in detail_resp.json().get('segment_efforts', []):
                 if str(effort.get('segment', {}).get('id')) == str(segment_id):
                     club_efforts.append({
                         "Name": f"{activity['athlete']['firstname']} {activity['athlete'].get('lastname', '')}".strip(),
                         "actual_time_sec": effort['elapsed_time']
                     })
-                    # Found the effort, stop checking this activity and move to next one
                     break 
-                    
-    # Remove duplicate riders (keeping the fastest time for each)
-    if club_efforts:
-        df_temp = pd.DataFrame(club_efforts)
-        df_temp = df_temp.sort_values('actual_time_sec').drop_duplicates('Name')
-        return df_temp.to_dict('records')
-        
-    return []
+    return club_efforts
+
+def fetch_club_segment_efforts(club_id, segment_id):
+    # 1. Try API Fetch
+    efforts = fetch_from_strava(club_id, segment_id)
     
+    # 2. Hybrid Merge: If API data is sparse (e.g., < 5 riders), add manual entries
+    if os.path.exists('manual_entries.csv'):
+        manual_df = pd.read_csv('manual_entries.csv')
+        manual_data = manual_df.to_dict('records')
+        
+        # Merge, preferring API data if available
+        names_in_efforts = [e['Name'] for e in efforts]
+        for entry in manual_data:
+            if entry['Name'] not in names_in_efforts:
+                efforts.append(entry)
+    
+    return efforts
+
 def process_club_handicaps(club_id, segment_id):
     efforts = fetch_club_segment_efforts(club_id, segment_id)
+    
     if not efforts:
-        print("Using baseline dataset for calculation...")
-        data = [{"Name": "Lee Brentz", "actual_time_sec": 331}, {"Name": "Renee Ryan", "actual_time_sec": 341}]
-        df = pd.DataFrame(data)
-    else:
-        df = pd.DataFrame(efforts)
+        print("No data found, skipping processing.")
+        return
 
-    df = df.sort_values(by='actual_time_sec').reset_index(drop=True)
+    df = pd.DataFrame(efforts)
+    # Deduplicate: Keep fastest time for each rider
+    df = df.sort_values('actual_time_sec').drop_duplicates('Name').reset_index(drop=True)
+    
     fastest = df['actual_time_sec'].min()
     slowest = df['actual_time_sec'].max()
     delta = slowest - fastest
     count = len(df)
     
+    # Dynamic Handicap Allocation
     handicaps = [round(delta * (i / (count - 1))) if count > 1 else 0.0 for i in range(count)]
     df['Handicap_Sec'] = handicaps
     df['Adjusted_Sec'] = df['actual_time_sec'] + df['Handicap_Sec']
