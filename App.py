@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import os
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 st.set_page_config(page_title="Welcome to the Bulimba Roadies Monthly Challenge", page_icon="🚴‍♂️", layout="wide")
 
@@ -47,12 +48,18 @@ def save_segment_url(url):
     pd.DataFrame({"URL": [url]}).to_csv(CONFIG_FILE, index=False)
 
 def log_url_history(url):
-    df = pd.DataFrame({"Date": [datetime.now().strftime("%Y-%m-%d %H:%M:%S")], "URL": [url]})
+    # Set to Brisbane time
+    brisbane_tz = ZoneInfo("Australia/Brisbane")
+    now_brisbane = datetime.now(brisbane_tz).strftime("%Y-%m-%d %H:%M:%S")
+    
+    df = pd.DataFrame({"Date": [now_brisbane], "URL": [url]})
+    
     if os.path.exists(HISTORY_FILE):
         history = pd.read_csv(HISTORY_FILE)
         history = pd.concat([history, df], ignore_index=True)
     else:
         history = df
+        
     # Keep only the last 10 entries
     history.tail(10).to_csv(HISTORY_FILE, index=False)
     
