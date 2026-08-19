@@ -91,7 +91,10 @@ def compute_handicaps(df):
 # --- DISPLAY ---
 if not active_riders.empty:
     processed_df = compute_handicaps(active_riders)
-    
+    stats_col1, stats_col2, stats_col3 = st.columns(3)
+    stats_col1.metric("Fastest Rider", format_time(active_riders["Segment Time (s)"].min()))
+    stats_col2.metric("Slowest Rider", format_time(active_riders["Segment Time (s)"].max()))
+    stats_col3.metric("Total Delta", f"{int(delta)} seconds")
     display_table = pd.DataFrame({
         "Place": processed_df["Place"],
         "Name": processed_df["Name"],
