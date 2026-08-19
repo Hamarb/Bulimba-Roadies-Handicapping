@@ -21,7 +21,6 @@ def get_fresh_token():
     return None
 
 def fetch_from_strava(club_id, segment_id):
-    """Helper to perform the actual API call."""
     access_token = get_fresh_token()
     if not access_token: return []
     
@@ -29,50 +28,38 @@ def fetch_from_strava(club_id, segment_id):
     url = f"https://www.strava.com/api/v3/clubs/{club_id}/activities?per_page=200"
     response = requests.get(url, headers=headers)
     
-    print(f"DEBUG: Strava API Response Code: {response.status_code}")
-    if response.status_code != 200:
-        print(f"DEBUG: API Error Details: {response.text}")
-        return []
+    if response.status_code != 200: return []
 
     activities = response.json()
-    print(f"DEBUG: Fetched {len(activities)} activities from Strava.")
-    
     club_efforts = []
+    
     for activity in activities:
-        # DIAGNOSTIC: Print what we are scanning
-        print(f"DEBUG: Scanning activity: '{activity.get('name')}' by {activity.get('athlete', {}).get('firstname')}")
-        
         activity_id = activity.get('id')
         if not activity_id: continue
             
         detail_url = f"https://www.strava.com/api/v3/activities/{activity_id}?include_all_efforts=true"
         detail_resp = requests.get(detail_url, headers=headers)
         
+        # Ensure this IF block is indented exactly 8 spaces
         if detail_resp.status_code == 200:
-            for effort in detail_resp.json().get('segment_efforts', []):
-                # Ensure we compare ID as strings
-                if str(effort.get('segment', {}).get('id')) == str(segment_id):
+            details = detail_resp.json()
+            for effort in details.get('segment_efforts', []):
+                seg_id = effort.get('segment', {}).get('id')
+                # Optional: Uncomment this to see what IDs are actually found
+                # print(f"DEBUG: Found Segment ID: {seg_id}")
+                
+                if str(seg_id) == str(segment_id):
                     club_efforts.append({
                         "Name": f"{activity['athlete']['firstname']} {activity['athlete'].get('lastname', '')}".strip(),
                         "actual_time_sec": effort['elapsed_time']
                     })
-                    print(f"DEBUG: Found segment match for {activity['athlete']['firstname']}")
                     break 
     return club_efforts
-
+    
 def fetch_club_segment_efforts(club_id, segment_id):
     # 1. Try API Fetch
     efforts = fetch_from_strava(club_id, segment_id)
-    # Inside your segment_efforts loop:
-        if detail_resp.status_code == 200:
-            details = detail_resp.json()
-            for effort in details.get('segment_efforts', []):
-                seg_name = effort.get('segment', {}).get('name')
-                seg_id = effort.get('segment', {}).get('id')
-                print(f"DEBUG: Found Segment in API: '{seg_name}' (ID: {seg_id})")
-                
-                if str(seg_id) == str(segment_id):
-                    # ... your append logic
+    
     # 2. Hybrid Merge: If API data is sparse (e.g., < 5 riders), add manual entries
     if os.path.exists('manual_entries.csv'):
         manual_df = pd.read_csv('manual_entries.csv')
