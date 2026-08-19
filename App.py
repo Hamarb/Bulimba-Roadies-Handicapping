@@ -259,7 +259,7 @@ with tab_admin:
         if st.checkbox("Show Admin Reset Controls"):
             if os.path.exists(FAQ_FILE):
                 with open(FAQ_FILE, "rb") as f:
-                st.download_button("Download current FAQ data", f, "faq_data.csv")
+                    st.download_button("Download current FAQ data", f, "faq_data.csv")
             st.warning("This will delete all current challenge data.")
             if st.button("🚨 PERMANENTLY RESET DATA"):
                 if os.path.exists(DATA_FILE): os.remove(DATA_FILE)
