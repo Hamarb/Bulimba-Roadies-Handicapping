@@ -9,11 +9,11 @@ st.set_page_config(page_title="Bulimba Roadies Handicapping", page_icon="🚴‍
 DATA_FILE = "manual_entries.csv"
 
 def load_data():
+    """Robustly loads or initializes the data file."""
     expected_columns = ["Name", "FTP (W)", "Segment Time (s)"]
     if os.path.exists(DATA_FILE):
         try:
             df = pd.read_csv(DATA_FILE)
-            # Check if columns are missing
             if not all(col in df.columns for col in expected_columns):
                 return pd.DataFrame(columns=expected_columns)
             return df
@@ -22,12 +22,13 @@ def load_data():
     return pd.DataFrame(columns=expected_columns)
 
 def format_time(sec):
+    """Formats seconds into 0:mm:ss string."""
     m = int(sec // 60)
     s = int(sec % 60)
     return f"0:{m:02d}:{s:02d}"
 
 st.title("🚴‍♂️ Bulimba Roadies - Dynamic Handicapping Portal")
-st.markdown("Manage club segments, update your FTP (set to 0 to opt out), and generate monthly handicap summaries.")
+st.markdown("Manage club segments, update your FTP (set FTP to 0 to opt out), and generate monthly handicap summaries.")
 
 # --- SIDEBAR: SUBMISSION & ADMIN ---
 st.sidebar.header("🚴‍♂️ Submit / Update Your Time")
@@ -70,10 +71,10 @@ def compute_handicaps(df):
     df["Place"] = df.index + 1
     return df
 
+# --- DISPLAY ---
 if not active_riders.empty:
     processed_df = compute_handicaps(active_riders)
     
-    # Prepare display table
     display_table = pd.DataFrame({
         "Place": processed_df["Place"],
         "Name": processed_df["Name"],
@@ -85,17 +86,20 @@ if not active_riders.empty:
     st.subheader(f"🏁 Live Seeding & Handicap Preview ({datetime.now().strftime('%m/%Y')})")
     st.dataframe(display_table, use_container_width=True, hide_index=True)
 
-    def load_data():
-    expected_columns = ["Name", "FTP (W)", "Segment Time (s)"]
-    if os.path.exists(DATA_FILE):
-        try:
-            df = pd.read_csv(DATA_FILE)
-            # Check if columns are missing
-            if not all(col in df.columns for col in expected_columns):
-                return pd.DataFrame(columns=expected_columns)
-            return df
-        except Exception:
-            return pd.DataFrame(columns=expected_columns)
-    return pd.DataFrame(columns=expected_columns)
+    # --- FACEBOOK SUMMARY GENERATOR ---
+    st.markdown("---")
+    if st.button("📋 Generate Facebook Monthly Challenge Summary"):
+        summary_markdown = f"""### 🏆 Monthly Challenge Summary
+**Period:** {datetime.now().strftime('%m/%Y')}
+
+| Place | Name | Actual Time | Handicap | Adjusted Time |
+| :--- | :--- | :--- | :--- | :--- |
+"""
+        for _, row in display_table.iterrows():
+            summary_markdown += f"| {row['Place']} | {row['Name']} | {row['Actual Time']} | {row['Handicap']} | {row['Adjusted Time']} |\n"
+        
+        st.markdown(summary_markdown)
+        st.info("👆 Copy the following text block for your Facebook post:")
+        st.code(summary_markdown, language="markdown")
 else:
     st.info("No times submitted yet. Be the first to enter your data!")
