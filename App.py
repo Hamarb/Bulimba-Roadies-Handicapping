@@ -9,6 +9,7 @@ st.set_page_config(page_title="Welcome to the Bulimba Roadies Monthly Challenge"
 DATA_FILE = "manual_entries.csv"
 FAQ_FILE = "faq_data.csv"
 CONFIG_FILE = "config.csv"
+HISTORY_FILE = "url_history.csv"
 
 def get_segment_url():
     if os.path.exists(CONFIG_FILE):
@@ -19,6 +20,16 @@ def get_segment_url():
 def save_segment_url(url):
     pd.DataFrame({"URL": [url]}).to_csv(CONFIG_FILE, index=False)
 
+def log_url_history(url):
+    df = pd.DataFrame({"Date": [datetime.now().strftime("%Y-%m-%d %H:%M:%S")], "URL": [url]})
+    if os.path.exists(HISTORY_FILE):
+        history = pd.read_csv(HISTORY_FILE)
+        history = pd.concat([history, df], ignore_index=True)
+    else:
+        history = df
+    # Keep only the last 10 entries
+    history.tail(10).to_csv(HISTORY_FILE, index=False)
+    
 def is_inappropriate(text):
     bad_words = ["rude", "badword1", "badword2"] 
     return any(word in text.lower() for word in bad_words)
@@ -125,7 +136,6 @@ with tab_faq:
 with tab_admin:
     st.header("Admin Configuration")
     
-    # Initialize session state for the message
     if 'url_updated' not in st.session_state:
         st.session_state.url_updated = False
 
@@ -133,17 +143,26 @@ with tab_admin:
     
     if st.button("Update Segment URL"):
         save_segment_url(new_url)
-        st.session_state.url_updated = True # Set the flag
+        log_url_history(new_url)  # Log to history
+        st.session_state.url_updated = True
         st.rerun()
 
-    # Show the message if the flag is True
     if st.session_state.url_updated:
         st.success("Segment URL updated across the app!")
-        st.session_state.url_updated = False # Reset flag so it doesn't show again on next refresh
+        st.session_state.url_updated = False
+
+    # --- URL HISTORY TABLE ---
+    st.subheader("Recent URL History")
+    if os.path.exists(HISTORY_FILE):
+        history_df = pd.read_csv(HISTORY_FILE).sort_values(by="Date", ascending=False)
+        st.dataframe(history_df.head(10), use_container_width=True, hide_index=True)
+    else:
+        st.write("No history available.")
 
     st.markdown("---")
     if st.checkbox("Show Admin Reset Controls"):
         st.warning("This will delete all current challenge data.")
         if st.button("🚨 PERMANENTLY RESET DATA"):
             if os.path.exists(DATA_FILE): os.remove(DATA_FILE)
+            if os.path.exists(HISTORY_FILE): os.remove(HISTORY_FILE)
             st.rerun()
