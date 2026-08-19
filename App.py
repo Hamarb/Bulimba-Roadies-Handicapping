@@ -124,14 +124,25 @@ with tab_faq:
 
 with tab_admin:
     st.header("Admin Configuration")
+    
+    # Initialize session state for the message
+    if 'url_updated' not in st.session_state:
+        st.session_state.url_updated = False
+
     new_url = st.text_input("Active Challenge Segment URL - Type the full Strava URL and click the button below to apply changes.", value=SEGMENT_URL)
+    
     if st.button("Update Segment URL"):
         save_segment_url(new_url)
-        st.success("Segment URL updated across the app!")
+        st.session_state.url_updated = True # Set the flag
         st.rerun()
-        
+
+    # Show the message if the flag is True
+    if st.session_state.url_updated:
+        st.success("Segment URL updated across the app!")
+        st.session_state.url_updated = False # Reset flag so it doesn't show again on next refresh
+
+    st.markdown("---")
     if st.checkbox("Show Admin Reset Controls"):
-        st.markdown("All submitted data is stored for 45 days. Data deletion is automated via a backend workflow.")
         st.warning("This will delete all current challenge data.")
         if st.button("🚨 PERMANENTLY RESET DATA"):
             if os.path.exists(DATA_FILE): os.remove(DATA_FILE)
