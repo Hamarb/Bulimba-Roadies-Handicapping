@@ -27,7 +27,7 @@ def format_time(sec):
     m, s = int(sec // 60), int(sec % 60)
     return f"0:{m:02d}:{s:02d}"
 
-st.title("🚴‍♂️ Bulimba Roadies - Dynamic Handicapping Challenge")
+st.title("🚴‍♂️ Bulimba Roadies - Handicapped Monthly Challenge")
 
 # --- TABS ---
 tab_inst, tab_entry, tab_seed, tab_res, tab_faq, tab_admin = st.tabs(
@@ -35,9 +35,9 @@ tab_inst, tab_entry, tab_seed, tab_res, tab_faq, tab_admin = st.tabs(
 )
 
 with tab_inst:
-    st.header("Welcome to the Bulimba Roadies Handicap Challenge!")
+    st.header("Welcome to the Bulimba Roadies Monthly Challenge!")
     st.info("Disclaimer: This application is a casual social experiment. Participation is entirely voluntary, and no one involved in the creation, hosting, or management of this app is legally or financially accountable for any outcomes, incidents, or errors. AI-generated elements and handicap calculations may include mistakes—use your best judgment and ride safely!")
-    st.markdown(f"**The official Challenge segment is:** [{SEGMENT_URL}]({SEGMENT_URL})")
+    st.markdown(f"**The active Challenge segment is:** [{SEGMENT_URL}]({SEGMENT_URL})")
     st.markdown("All submitted data is stored for 45 days. Data deletion is automated via a backend workflow.")
 
 with tab_entry:
