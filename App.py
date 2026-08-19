@@ -214,8 +214,10 @@ with tab_res:
         avg_delta = active["Delta_Estimate"].mean()
         st.markdown(f"**Current average delta:** {int(avg_delta)} seconds.")
         
-        # Sort by FTP and Segment Time to ensure stable ordering
-        active = active.sort_values(by=["FTP (W)", "Segment Time (s)"], ascending=[True, True]).reset_index(drop=True)
+        # Sort by FTP ascending (lowest to highest power), 
+        # and Segment Time descending (slowest actual time to fastest actual time) 
+        # so that actual fast riders are correctly positioned higher up the handicap penalty curve.
+        active = active.sort_values(by=["FTP (W)", "Segment Time (s)"], ascending=[True, False]).reset_index(drop=True)
         count = len(active)
         
         base_slice = avg_delta / count
