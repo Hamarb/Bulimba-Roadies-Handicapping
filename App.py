@@ -142,7 +142,7 @@ with tab_res:
         avg_delta = active["Delta_Estimate"].mean()
         
         # Display the Delta metric at the top of the tab
-        st.markdown(f"**Current average delta based on the inputs provided by all participants:** {int(avg_delta)} seconds")
+        st.markdown(f"**Current average delta based on the inputs provided by all participants:** {int(avg_delta)} seconds! This number gets divided by the number of participants and then multiplier by your relative position in the seeding table.")
         
         active = active.sort_values(by="Segment Time (s)").reset_index(drop=True)
         count = len(active)
