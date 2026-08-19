@@ -3,100 +3,107 @@ import pandas as pd
 import os
 from datetime import datetime
 
-st.set_page_config(page_title="Bulimba Roadies Handicapping", page_icon="🚴‍♂️", layout="wide")
+st.set_page_config(page_title="Bulimba Roadies Challenge", page_icon="🚴‍♂️", layout="wide")
 
 # --- FILE CONFIG ---
 DATA_FILE = "manual_entries.csv"
+FAQ_FILE = "faq_data.csv"
+SEGMENT_URL = "https://www.strava.com/segments/22270858"
 
-def load_data():
-    expected_columns = ["Name", "FTP (W)", "Segment Time (s)", "Delta_Estimate"]
-    if os.path.exists(DATA_FILE):
-        try:
-            df = pd.read_csv(DATA_FILE)
-            for col in expected_columns:
-                if col not in df.columns: df[col] = 0
-            return df
-        except: return pd.DataFrame(columns=expected_columns)
-    return pd.DataFrame(columns=expected_columns)
+def load_data(file, cols):
+    if os.path.exists(file):
+        try: return pd.read_csv(file)
+        except: pass
+    return pd.DataFrame(columns=cols)
 
 def format_time(sec):
     m, s = int(sec // 60), int(sec % 60)
     return f"0:{m:02d}:{s:02d}"
 
-st.title("🚴‍♂️ Bulimba Roadies - Dynamic Handicapping Portal")
+st.title("🚴‍♂️ Bulimba Roadies - Dynamic Handicapping Challenge")
 
-# --- MAIN LAYOUT ---
-tab1, tab2 = st.tabs(["🏁 Current Race", "📋 Submit & Admin"])
+# --- TABS ---
+tab_inst, tab_entry, tab_seed, tab_res, tab_faq, tab_admin = st.tabs(
+    ["Instructions", "Data Entry", "Seeding", "Results", "FAQ", "Admin"]
+)
 
-with tab1:
-    # --- HANDICAP CALCULATION ENGINE ---
-    df = load_data()
-    active_riders = df[(df["FTP (W)"] > 0) & (df["Segment Time (s)"] > 0)].copy()
+with tab_inst:
+    st.header("Welcome to the Bulimba Roadies Handicap Challenge!")
+    st.info("Disclaimer: This application is a casual social experiment. Participation is entirely voluntary, and no one involved in the creation, hosting, or management of this app is legally or financially accountable for any outcomes, incidents, or errors. AI-generated elements and handicap calculations may include mistakes—use your best judgment and ride safely!")
+    st.markdown(f"**The official Challenge segment is:** [{SEGMENT_URL}]({SEGMENT_URL})")
+    st.markdown("All submitted data is stored for 45 days. Data deletion is automated via a backend workflow.")
 
-    if not active_riders.empty:
-        delta = active_riders["Delta_Estimate"].mean()
-        active_riders = active_riders.sort_values(by="Segment Time (s)").reset_index(drop=True)
-        count = len(active_riders)
+with tab_entry:
+    st.header("Data Entry")
+    st.markdown(f"**Challenge Segment:** [{SEGMENT_URL}]({SEGMENT_URL})")
+    with st.form("entry_form", clear_on_submit=True):
+        name = st.text_input("Name")
+        ftp = st.number_input("Current FTP (Watts)", 0, 500, 250)
+        time = st.number_input("Segment Time (seconds)", 60, 3600, 400)
+        delta_est = st.number_input("Your Estimated Delta (seconds)", 10, 1200, 300, help="What do you think is the gap between the fastest and slowest rider today?")
         
-        # Corrected Handicap logic
-        handicaps = [round(delta * (1 - (i / (count - 1)))) if count > 1 else 0 for i in range(count)]
-        active_riders["Handicap_Sec"] = handicaps
-        active_riders["Adjusted_Sec"] = active_riders["Segment Time (s)"] + active_riders["Handicap_Sec"]
-        active_riders = active_riders.sort_values(by="Adjusted_Sec").reset_index(drop=True)
-        active_riders["Place"] = active_riders.index + 1
-
-        # Metrics Row
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Participants", len(active_riders))
-        col2.metric("Group Delta", f"{int(delta)}s")
-        col3.metric("Fastest Actual", format_time(active_riders["Segment Time (s)"].min()))
-
-        # Display Table
-        display_table = active_riders[["Place", "Name", "Segment Time (s)", "Handicap_Sec", "Adjusted_Sec"]]
-        display_table.columns = ["Place", "Name", "Actual Time", "Handicap", "Adjusted Time"]
-        # Apply formatting for display
-        display_fmt = display_table.copy()
-        display_fmt["Actual Time"] = display_fmt["Actual Time"].apply(format_time)
-        display_fmt["Handicap"] = display_fmt["Handicap"].apply(format_time)
-        display_fmt["Adjusted Time"] = display_fmt["Adjusted Time"].apply(format_time)
-        st.dataframe(display_fmt, use_container_width=True, hide_index=True)
-
-        # Facebook Summary
-        if st.button("📋 Generate Facebook Summary"):
-            st.info("👆 Copy this for your Facebook post:")
-            summary = "### 🏆 Monthly Challenge Summary\n"
-            summary += "| Place | Name | Actual Time | Handicap | Adjusted Time |\n| :--- | :--- | :--- | :--- | :--- |\n"
-            for _, row in display_fmt.iterrows():
-                summary += f"| {row['Place']} | {row['Name']} | {row['Actual Time']} | {row['Handicap']} | {row['Adjusted Time']} |\n"
-            st.code(summary, language="markdown")
-    else:
-        st.info("No times submitted yet. Head to the 'Submit' tab to enter data!")
-
-with tab2:
-    # --- SUBMISSION EXPANDER ---
-    with st.expander("🚴‍♂️ Submit / Update Your Time", expanded=True):
-        with st.form("submission_form", clear_on_submit=True):
-            name = st.text_input("Name")
-            ftp = st.number_input("FTP (Watts)", 0, 500, 250)
-            time = st.number_input("Segment Time (seconds)", 60, 3600, 400)
-            delta_est = st.number_input("Estimated Delta (sec)", 10, 1200, 300)
-            if st.form_submit_button("Submit / Update"):
-                df = load_data()
-                if name in df["Name"].values:
-                    df.loc[df["Name"] == name, ["FTP (W)", "Segment Time (s)", "Delta_Estimate"]] = [ftp, time, delta_est]
-                else:
-                    new = pd.DataFrame([{"Name": name, "FTP (W)": ftp, "Segment Time (s)": time, "Delta_Estimate": delta_est}])
-                    df = pd.concat([df, new], ignore_index=True)
+        if st.form_submit_button("Submit Entry"):
+            if not name: st.error("Name is required!")
+            else:
+                df = load_data(DATA_FILE, ["Name", "FTP (W)", "Segment Time (s)", "Delta_Estimate", "Date"])
+                new_entry = pd.DataFrame([{"Name": name, "FTP (W)": ftp, "Segment Time (s)": time, 
+                                           "Delta_Estimate": delta_est, "Date": datetime.now().strftime("%Y-%m-%d")}])
+                df = pd.concat([df[df["Name"] != name], new_entry], ignore_index=True)
                 df.to_csv(DATA_FILE, index=False)
                 st.success("Entry saved!")
                 st.rerun()
 
-    # --- LOCKED ADMIN ZONE ---
-    st.markdown("---")
-    st.subheader("⚠️ Admin Controls")
-    if st.checkbox("I want to show Admin controls"):
-        st.warning("This will delete all current race data.")
-        if st.button("🚨 PERMANENTLY RESET FOR NEW MONTH"):
-            if os.path.exists(DATA_FILE):
-                os.remove(DATA_FILE)
-                st.rerun()
+with tab_seed:
+    st.header("Seeding Order")
+    df = load_data(DATA_FILE, ["Name", "FTP (W)", "Date"])
+    if not df.empty:
+        seed_df = df.sort_values(by="FTP (W)", ascending=False)[["Name", "FTP (W)", "Date"]]
+        st.dataframe(seed_df, use_container_width=True, hide_index=True)
+
+with tab_res:
+    st.header("Challenge Results")
+    df = load_data(DATA_FILE, ["Name", "Segment Time (s)", "Delta_Estimate"])
+    active = df[(df["Segment Time (s)"] > 0) & (df["Delta_Estimate"] > 0)].copy()
+    
+    if not active.empty:
+        delta = active["Delta_Estimate"].mean()
+        active = active.sort_values(by="Segment Time (s)").reset_index(drop=True)
+        count = len(active)
+        
+        # Handicap Logic
+        handicaps = [round(delta * (1 - (i / (count - 1)))) if count > 1 else 0 for i in range(count)]
+        active["Handicap_Sec"] = handicaps
+        active["Adjusted_Sec"] = active["Segment Time (s)"] + active["Handicap_Sec"]
+        active = active.sort_values(by="Adjusted_Sec").reset_index(drop=True)
+        active["Place"] = active.index + 1
+        
+        display = active.copy()
+        display["Actual Time"] = display["Segment Time (s)"].apply(format_time)
+        display["Handicap"] = display["Handicap_Sec"].apply(format_time)
+        display["Adjusted Time"] = display["Adjusted_Sec"].apply(format_time)
+        st.dataframe(display[["Place", "Name", "Actual Time", "Handicap", "Adjusted Time"]], use_container_width=True, hide_index=True)
+
+        if st.button("📋 Generate Facebook Summary"):
+            summary = f"### 🏆 Monthly Challenge Summary\n**Period:** {datetime.now().strftime('%m/%Y')}\n\n| Place | Name | Actual Time | Handicap | Adjusted Time |\n| :--- | :--- | :--- | :--- | :--- |\n"
+            for _, row in display.iterrows():
+                summary += f"| {row['Place']} | {row['Name']} | {row['Actual Time']} | {row['Handicap']} | {row['Adjusted Time']} |\n"
+            summary += f"\nCheck out the Challenge segment details here: {SEGMENT_URL}"
+            st.code(summary, language="markdown")
+    else:
+        st.info("No data available.")
+
+with tab_faq:
+    st.header("Frequently Asked Questions")
+    faq_df = load_data(FAQ_FILE, ["Question", "Answer"])
+    for _, row in faq_df.iterrows():
+        with st.expander(row["Question"]): st.write(row["Answer"])
+    
+    q = st.text_input("Submit a question:")
+    if st.button("Submit Question"):
+        if any(bad in q.lower() for bad in ["rude", "name"]): st.error("Keep it constructive and avoid personal names.")
+        else: st.success("Question submitted for review.")
+
+with tab_admin:
+    st.header("Admin Configuration")
+    st.markdown("All data is stored for 45 days. Data deletion is automated via a backend workflow.")
+    st.text_input("Active Challenge Segment URL", value=SEGMENT_URL, disabled=True)
