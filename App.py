@@ -144,8 +144,10 @@ with tab_inst:
            The person with the lowest FTP still receives a handicap (Group Estimated Delta divided by the total participant count), ensuring no one sits at zero and the exact same formula applies equally to all members.
            
         4. **The Adjusted Finish** Your official adjusted time is calculated by adding your calculated handicap to your actual segment time:
-           $$\\text{Adjusted Time} = \\text{Actual Time} + \\text{Handicap}$$
-           The rider with the fastest adjusted time takes the win!
+
+        *Adjusted Time = Actual Time + Handicap*
+
+        The rider with the fastest adjusted time takes the win!
 
         ---
 
