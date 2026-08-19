@@ -85,19 +85,17 @@ if not active_riders.empty:
     st.subheader(f"🏁 Live Seeding & Handicap Preview ({datetime.now().strftime('%m/%Y')})")
     st.dataframe(display_table, use_container_width=True, hide_index=True)
 
-    # --- FACEBOOK SUMMARY GENERATOR ---
-    st.markdown("---")
-    if st.button("📋 Generate Facebook Monthly Challenge Summary"):
-        summary_markdown = f"""### 🏆 Monthly Challenge Summary
-**Period:** {datetime.now().strftime('%m/%Y')}
-
-| Place | Name | Actual Time | Handicap | Adjusted Time |
-| :--- | :--- | :--- | :--- | :--- |
-"""
-        for _, row in display_table.iterrows():
-            summary_markdown += f"| {row['Place']} | {row['Name']} | {row['Actual Time']} | {row['Handicap']} | {row['Adjusted Time']} |\n"
-        
-        st.markdown(summary_markdown)
-        st.code(summary_markdown, language="markdown")
+    def load_data():
+    expected_columns = ["Name", "FTP (W)", "Segment Time (s)"]
+    if os.path.exists(DATA_FILE):
+        try:
+            df = pd.read_csv(DATA_FILE)
+            # Check if columns are missing
+            if not all(col in df.columns for col in expected_columns):
+                return pd.DataFrame(columns=expected_columns)
+            return df
+        except Exception:
+            return pd.DataFrame(columns=expected_columns)
+    return pd.DataFrame(columns=expected_columns)
 else:
     st.info("No times submitted yet. Be the first to enter your data!")
