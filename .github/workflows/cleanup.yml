@@ -26,6 +26,11 @@ jobs:
         run: |
           git config user.name 'github-actions'
           git config user.email 'github-actions@github.com'
-          git add manual_entries.csv
-          git commit -m 'Auto-purge data older than 45 days'
-          git push
+          # Check if there are changes before committing
+          if [[ -n $(git status -s) ]]; then
+            git add manual_entries.csv
+            git commit -m 'Auto-purge data older than 45 days'
+            git push
+          else
+            echo "No data older than 45 days found. Nothing to push."
+          fi
