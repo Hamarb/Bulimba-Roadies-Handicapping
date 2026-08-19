@@ -63,7 +63,16 @@ def fetch_from_strava(club_id, segment_id):
 def fetch_club_segment_efforts(club_id, segment_id):
     # 1. Try API Fetch
     efforts = fetch_from_strava(club_id, segment_id)
-    
+    # Inside your segment_efforts loop:
+        if detail_resp.status_code == 200:
+            details = detail_resp.json()
+            for effort in details.get('segment_efforts', []):
+                seg_name = effort.get('segment', {}).get('name')
+                seg_id = effort.get('segment', {}).get('id')
+                print(f"DEBUG: Found Segment in API: '{seg_name}' (ID: {seg_id})")
+                
+                if str(seg_id) == str(segment_id):
+                    # ... your append logic
     # 2. Hybrid Merge: If API data is sparse (e.g., < 5 riders), add manual entries
     if os.path.exists('manual_entries.csv'):
         manual_df = pd.read_csv('manual_entries.csv')
