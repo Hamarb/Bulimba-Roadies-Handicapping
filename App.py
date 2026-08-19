@@ -235,7 +235,7 @@ with tab_admin:
         if 'url_updated' not in st.session_state:
             st.session_state.url_updated = False
     
-        new_url = st.text_input("Active Challenge Segment URL - Paste the full Strava URL and click the button below to apply changes.", value=SEGMENT_URL)
+        new_url = st.text_input("Active Challenge Segment URL - Paste the full Strava URL and click the "Update Segment URL" button below to apply changes.", value=SEGMENT_URL)
         
         if st.button("Update Segment URL"):
             save_segment_url(new_url)
