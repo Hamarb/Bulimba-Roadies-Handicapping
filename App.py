@@ -91,10 +91,13 @@ def compute_handicaps(df):
 # --- DISPLAY ---
 if not active_riders.empty:
     processed_df = compute_handicaps(active_riders)
-    stats_col1, stats_col2, stats_col3 = st.columns(3)
-    stats_col1.metric("Fastest Rider", format_time(active_riders["Segment Time (s)"].min()))
-    stats_col2.metric("Slowest Rider", format_time(active_riders["Segment Time (s)"].max()))
-    stats_col3.metric("Total Delta", f"{int(delta)} seconds")
+    
+    # CALCULATE STATS HERE: Make sure these exist before you use them
+    fastest_time = active_riders["Segment Time (s)"].min()
+    slowest_time = active_riders["Segment Time (s)"].max()
+    delta = slowest_time - fastest_time
+    
+    # Prepare display table
     display_table = pd.DataFrame({
         "Place": processed_df["Place"],
         "Name": processed_df["Name"],
@@ -104,6 +107,13 @@ if not active_riders.empty:
     })
 
     st.subheader(f"🏁 Live Seeding & Handicap Preview ({datetime.now().strftime('%m/%Y')})")
+    
+    # Now that delta is defined above, this will work:
+    stats_col1, stats_col2, stats_col3 = st.columns(3)
+    stats_col1.metric("Fastest Rider", format_time(fastest_time))
+    stats_col2.metric("Slowest Rider", format_time(slowest_time))
+    stats_col3.metric("Total Delta", f"{int(delta)} seconds")
+    
     st.dataframe(display_table, use_container_width=True, hide_index=True)
 
     # --- FACEBOOK SUMMARY GENERATOR ---
