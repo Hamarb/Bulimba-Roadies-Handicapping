@@ -12,14 +12,19 @@ CONFIG_FILE = "config.csv"
 HISTORY_FILE = "url_history.csv"
 
 def enforce_retention(file):
-    if os.path.exists(file):
-        df = pd.read_csv(file)
-        if 'Date' in df.columns:
-            df['Date'] = pd.to_datetime(df['Date'])
-            cutoff = datetime.now() - timedelta(days=45)
-            df_cleaned = df[df['Date'] >= cutoff]
-            if len(df_cleaned) < len(df):
-                df_cleaned.to_csv(file, index=False)
+    # Only try to process if the file exists and is not empty
+    if os.path.exists(file) and os.path.getsize(file) > 0:
+        try:
+            df = pd.read_csv(file)
+            if 'Date' in df.columns:
+                df['Date'] = pd.to_datetime(df['Date'])
+                cutoff = datetime.now() - timedelta(days=45)
+                df_cleaned = df[df['Date'] >= cutoff]
+                # Only write back if changes were made
+                if len(df_cleaned) < len(df):
+                    df_cleaned.to_csv(file, index=False)
+        except Exception as e:
+            st.warning(f"Could not process retention: {e}")
 
 enforce_retention(DATA_FILE)
 
