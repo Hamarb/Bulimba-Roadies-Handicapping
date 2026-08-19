@@ -127,7 +127,7 @@ with tab_seed:
     st.header("Seeding Order")
     df = load_data(DATA_FILE, ["Name", "FTP (W)", "Date"])
     if not df.empty and "FTP (W)" in df.columns:
-        seed_df = df.sort_values(by="FTP (W)", ascending=False)[["Name", "FTP (W)", "Date"]]
+        seed_df = df.sort_values(by="FTP (W)", ascending=True)[["Name", "FTP (W)", "Date"]]
         st.dataframe(seed_df, use_container_width=True, hide_index=True)
     else:
         st.info("No data available.")
@@ -142,7 +142,7 @@ with tab_res:
         avg_delta = active["Delta_Estimate"].mean()
         
         # Display the Delta metric at the top of the tab
-        st.markdown(f"**Current average delta based on the inputs provided by all participants:** {int(avg_delta)} seconds! This number gets divided by the number of participants and then multiplier by your relative position in the seeding table.")
+        st.markdown(f"**Current average delta based on the inputs provided by all participants:** {int(avg_delta)} seconds! This number gets divided by the number of participants and then multiplied by your relative position in the seeding table.")
         
         active = active.sort_values(by="Segment Time (s)").reset_index(drop=True)
         count = len(active)
