@@ -58,32 +58,21 @@ df = load_data()
 active_riders = df[df["FTP (W)"] > 0].copy()
 
 def compute_handicaps(df):
-    # 1. Sort from fastest to slowest
-    df = df.sort_values(by="Segment Time (s)").reset_index(drop=True)
+    # 1. Use the average of all riders' estimates for the Delta
+    delta = df['User_Estimated_Delta'].mean()
     
-    fastest = df["Segment Time (s)"].min()
-    slowest = df["Segment Time (s)"].max()
-    delta = slowest - fastest
+    # 2. Sort riders by their ACTUAL times
+    df = df.sort_values(by="Segment Time (s)").reset_index(drop=True)
     count = len(df)
     
-    # 2. Assign handicaps: 
-    # Fastest rider (index 0) gets the full delta penalty.
-    # Slowest rider (last index) gets 0 penalty.
-    handicaps = []
-    for i in range(count):
-        if count > 1:
-            # Formula: The further you are from the slow end, the bigger the penalty
-            h = delta * (1 - (i / (count - 1)))
-        else:
-            h = 0.0
-        handicaps.append(round(h))
-        
-    df["Handicap_Sec"] = handicaps
+    # 3. Apply the handicap using that community-voted Delta
+    # Fastest gets the full penalty, slowest gets 0
+    handicaps = [round(delta * (1 - (i / (count - 1)))) if count > 1 else 0 for i in range(count)]
     
-    # 3. Add the handicap (penalty) to the actual time
+    df["Handicap_Sec"] = handicaps
     df["Adjusted_Sec"] = df["Segment Time (s)"] + df["Handicap_Sec"]
     
-    # 4. Sort final results by Adjusted Time
+    # 4. Final Rankings
     df = df.sort_values(by="Adjusted_Sec").reset_index(drop=True)
     df["Place"] = df.index + 1
     return df
