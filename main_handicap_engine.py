@@ -13,15 +13,18 @@ def process_club_handicaps():
     df = df.sort_values('Segment Time (s)').drop_duplicates('Name').reset_index(drop=True)
     
     # 3. Calculate dynamic handicap using the COMMUNITY ESTIMATE
-    # We take the mean of all user-provided delta estimates
     group_delta = df['Delta_Estimate'].mean()
     count = len(df)
     
-    # Fastest gets the full penalty, slowest gets 0 penalty
+    # Calculate the base slice for the slowest rider
+    base_slice = group_delta / count
+    
+    # Calculate handicaps: 
+    # Fastest (i=0) gets full group_delta, Slowest (i=count-1) gets base_slice
     handicaps = []
     for i in range(count):
         if count > 1:
-            h = group_delta * (1 - (i / (count - 1)))
+            h = (group_delta - base_slice) * (1 - (i / (count - 1))) + base_slice
         else:
             h = 0.0
         handicaps.append(round(h))
