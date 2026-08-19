@@ -138,10 +138,17 @@ with tab_res:
     active = df[(df["Segment Time (s)"] > 0) & (df["Delta_Estimate"] > 0)].copy()
     
     if not active.empty:
-        delta = active["Delta_Estimate"].mean()
+        # Calculate the current average delta from all participants
+        avg_delta = active["Delta_Estimate"].mean()
+        
+        # Display the Delta metric at the top of the tab
+        st.metric("Current Average Delta", f"{int(avg_delta)} seconds")
+        
         active = active.sort_values(by="Segment Time (s)").reset_index(drop=True)
         count = len(active)
-        handicaps = [round(delta * (1 - (i / (count - 1)))) if count > 1 else 0 for i in range(count)]
+        
+        # Handicap Logic using the calculated avg_delta
+        handicaps = [round(avg_delta * (1 - (i / (count - 1)))) if count > 1 else 0 for i in range(count)]
         active["Handicap_Sec"] = handicaps
         active["Adjusted_Sec"] = active["Segment Time (s)"] + active["Handicap_Sec"]
         active = active.sort_values(by="Adjusted_Sec").reset_index(drop=True)
@@ -154,7 +161,8 @@ with tab_res:
         st.dataframe(display[["Place", "Name", "Actual Time", "Handicap", "Adjusted Time"]], use_container_width=True, hide_index=True)
 
         if st.button("📋 Generate Facebook Summary"):
-            summary = f"### 🏆 Monthly Challenge Summary\n**Period:** {datetime.now().strftime('%m/%Y')}\n\n| Place | Name | Actual Time | Handicap | Adjusted Time |\n| :--- | :--- | :--- | :--- | :--- |\n"
+            # Include the avg_delta in the summary header
+            summary = f"### 🏆 Monthly Challenge Summary\n**Period:** {datetime.now().strftime('%m/%Y')}\n**Current Average Delta:** {int(avg_delta)} seconds\n\n| Place | Name | Actual Time | Handicap | Adjusted Time |\n| :--- | :--- | :--- | :--- | :--- |\n"
             for _, row in display.iterrows():
                 summary += f"| {row['Place']} | {row['Name']} | {row['Actual Time']} | {row['Handicap']} | {row['Adjusted Time']} |\n"
             summary += f"\nCheck out the active challenge segment details here: {SEGMENT_URL}"
