@@ -230,7 +230,6 @@ with tab_faq:
             
 with tab_admin:
     if st.checkbox("Show Admin Reset Controls"):
-        st.markdown("---")
         st.header("Admin Configuration")
         
         if 'url_updated' not in st.session_state:
@@ -259,8 +258,8 @@ with tab_admin:
         if os.path.exists(FAQ_FILE):
             with open(FAQ_FILE, "rb") as f:
                 st.download_button("Download current FAQ data", f, "faq_data.csv")
+                if st.button("🚨 PERMANENTLY RESET DATA"):
                 st.warning("This will delete all current challenge data.")
-            if st.button("🚨 PERMANENTLY RESET DATA"):
                 if os.path.exists(DATA_FILE): os.remove(DATA_FILE)
                 if os.path.exists(HISTORY_FILE): os.remove(HISTORY_FILE)
                 st.rerun()
