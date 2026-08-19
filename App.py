@@ -46,7 +46,7 @@ with tab_entry:
     st.markdown(f"**Challenge Segment:** [{SEGMENT_URL}]({SEGMENT_URL})")
     with st.form("entry_form", clear_on_submit=True):
         name = st.text_input("Firstname Lastname")
-        ftp = st.number_input("Current FTP (Watts). The amount of power you can sustain for 20 minutes.", help="This is used to create the seeding or order of participants. The data that you enter will be visible to other participants.", 0, 500, 100)
+        ftp = st.number_input("Current FTP (Watts). The amount of power you can sustain for 20 minutes.", 0, 500, 100, help="This is used to create the seeding or order of participants. The data that you enter will be visible to other participants.")
         time = st.number_input("Your actual completion time for the segment (in seconds). This should come from Strava", 60, 3600, 400)
         delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place", 10, 1200, 300, help="What do you think is the gap between the fastest and slowest rider?")
         
