@@ -124,7 +124,7 @@ with tab_faq:
 
 with tab_admin:
     st.header("Admin Configuration")
-    new_url = st.text_input("Active Challenge Segment URL", value=SEGMENT_URL, help="Type the full Strava URL and click the button below to apply changes.")
+    new_url = st.text_input("Active Challenge Segment URL - Type the full Strava URL and click the button below to apply changes.", value=SEGMENT_URL)
     if st.button("Update Segment URL"):
         save_segment_url(new_url)
         st.success("Segment URL updated across the app!")
