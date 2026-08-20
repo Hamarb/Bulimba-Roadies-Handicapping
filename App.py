@@ -158,7 +158,9 @@ with tab_inst:
 
     st.markdown("""
     **Instructions**
+    
     We have a love hate relationship with Strava. We all love the platform and how it presents our data. Unfortunately getting data out is more challenging. This app is a compromise that will evolve with use.
+    
     1. Admin will set the "The active challenge segment".
     2. Participants just ride the segment and then complete the data entry form. 
     3. This app will calculate handicaps, seeding and the results.
