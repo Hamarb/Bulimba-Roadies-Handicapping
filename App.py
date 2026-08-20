@@ -191,92 +191,50 @@ with tab_inst:
 with tab_entry:
     st.header("Data Entry")
         
-    df_all = load_data()
     existing_names = get_existing_names()
     
-    # Pre-selection lookup for auto-filling and side-by-side display
-    selected_lookup = st.selectbox("Quick-Select Existing Rider (Optional - pre-fills form & views last submission)", options=["-- Select to look up / autofill --"] + existing_names)
-    
-    default_ftp = 100
-    default_time = 400
-    default_delta = 300
-    default_name = ""
-    latest_record = None
-    
-    if selected_lookup != "-- Select to look up / autofill --":
-        default_name = selected_lookup
-        user_records = df_all[df_all["Name"] == selected_lookup]
-        if not user_records.empty:
-            # Sort by date to grab the absolute latest entry
-            if "Date" in user_records.columns:
-                user_records["Date"] = pd.to_datetime(user_records["Date"], errors="coerce")
-                user_records = user_records.sort_values(by="Date", ascending=False)
-            latest_record = user_records.iloc[0]
-            default_ftp = int(latest_record.get("FTP (W)", 100))
-            default_time = int(latest_record.get("Segment Time (s)", 400))
-            default_delta = int(latest_record.get("Delta_Estimate", 300))
-
-    # Split into 2 columns: Left for Form, Right for Previous Submission Details
-    form_col, history_col = st.columns([1.2, 0.8])
-    
-    with form_col:
-        with st.form("entry_form", clear_on_submit=True):
-            st.markdown("### Rider Details")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                selected_existing = st.selectbox("Select Existing Rider", options=["-- Select --"] + existing_names)
-            with col2:
-                typed_new_name = st.text_input("Or Type New Name Here", value=default_name, help="Type your name if you are a new participant.")
-            
-            ftp = st.number_input("Current FTP (Watts)", 0, 500, default_ftp, help="Sustained 20-minute power output.")
-            time = st.number_input("Your actual completion time for the segment (in seconds).", 60, 3600, default_time)
-            delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place.", 10, 1200, default_delta)
-            
-            if st.form_submit_button("Submit Entry"):
-                if typed_new_name.strip():
-                    clean_name = typed_new_name.strip()
-                elif selected_existing != "-- Select --":
-                    clean_name = selected_existing.strip()
-                else:
-                    clean_name = ""
-                    
-                if not clean_name: 
-                    st.error("Please select an existing rider or type a new name!")
-                else:
-                    brisbane_tz = ZoneInfo("Australia/Brisbane")
-                    now_brisbane = datetime.now(brisbane_tz).strftime("%Y-%m-%d %H:%M:%S")
-                    
-                    new_entry = pd.DataFrame([{
-                        "Name": clean_name, 
-                        "FTP (W)": ftp, 
-                        "Segment Time (s)": time, 
-                        "Delta_Estimate": delta_est, 
-                        "Segment": SEGMENT_URL,
-                        "Date": now_brisbane
-                    }])
-                    
-                    df_all = load_data()
-                    df_all = pd.concat([df_all[df_all["Name"] != clean_name], new_entry], ignore_index=True)
-                    save_data(df_all)
-                    
-                    st.success(f"Entry saved for {clean_name}!")
-                    st.rerun()
-
-    with history_col:
-        st.markdown("### 📋 Latest Submission")
-        if selected_lookup != "-- Select to look up / autofill --" and latest_record is not None:
-            st.info(f"Showing last recorded stats for **{selected_lookup}**:")
-            st.metric("FTP", f"{int(latest_record.get('FTP (W)', 0))} W")
-            st.metric("Segment Time", format_time(int(latest_record.get('Segment Time (s)', 0))))
-            st.metric("Estimated Delta", f"{int(latest_record.get('Delta_Estimate', 0))} sec")
-            
-            rec_date = str(latest_record.get('Date', 'N/A'))
-            rec_seg = str(latest_record.get('Segment', 'N/A'))
-            st.caption(f"**Submitted On:** {rec_date}")
-            st.caption(f"**Segment:** [Link]({rec_seg})")
-        else:
-            st.markdown("<div style='padding: 20px; background-color: #f8f9fa; border-radius: 5px; color: #6c757d; text-align: center;'>Select a rider above to view their previous submission details here.</div>", unsafe_allow_html=True)
+    with st.form("entry_form", clear_on_submit=True):
+        st.markdown("### Rider Details")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            selected_existing = st.selectbox("Select Existing Rider", options=["-- Select --"] + existing_names)
+        with col2:
+            typed_new_name = st.text_input("Or Type New Name Here", help="Type your name if you are a new participant.")
+        
+        ftp = st.number_input("Current FTP (Watts)", 0, 500, 100, help="Sustained 20-minute power output.")
+        time = st.number_input("Your actual completion time for the segment (in seconds).", 60, 3600, 400)
+        delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place.", 10, 1200, 300)
+        
+        if st.form_submit_button("Submit Entry"):
+            if typed_new_name.strip():
+                clean_name = typed_new_name.strip()
+            elif selected_existing != "-- Select --":
+                clean_name = selected_existing.strip()
+            else:
+                clean_name = ""
+                
+            if not clean_name: 
+                st.error("Please select an existing rider or type a new name!")
+            else:
+                df = load_data()
+                brisbane_tz = ZoneInfo("Australia/Brisbane")
+                now_brisbane = datetime.now(brisbane_tz).strftime("%Y-%m-%d %H:%M:%S")
+                
+                new_entry = pd.DataFrame([{
+                    "Name": clean_name, 
+                    "FTP (W)": ftp, 
+                    "Segment Time (s)": time, 
+                    "Delta_Estimate": delta_est, 
+                    "Segment": SEGMENT_URL,
+                    "Date": now_brisbane
+                }])
+                
+                df = pd.concat([df[df["Name"] != clean_name], new_entry], ignore_index=True)
+                save_data(df)
+                
+                st.success(f"Entry saved for {clean_name}!")
+                st.rerun()
 
     st.markdown("---")
     with st.expander("🗑️ Need to delete your entry?"):
@@ -438,3 +396,15 @@ with tab_admin:
 
                 if not admin_name:
                     st.error("Please select an existing admin name or type a new name.")
+                elif not new_url.strip():
+                    st.error("Please enter a valid Segment URL.")
+                else:
+                    if save_segment_submission(admin_name, new_url):
+                        st.success(f"Segment updated and logged successfully by {admin_name}!")
+                        st.rerun()
+        
+        st.subheader("Segment Configuration History")
+        if not segment_df.empty:
+            st.dataframe(segment_df.sort_values(by="Date", ascending=False).head(10), use_container_width=True, hide_index=True)
+        else:
+            st.write("No segment history available.")
