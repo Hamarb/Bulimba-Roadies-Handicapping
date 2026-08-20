@@ -194,18 +194,42 @@ with tab_entry:
     df_all = load_data()
     existing_names = get_existing_names()
     
+    st.markdown("### Rider Details")
+    
+    # Initialize session state keys for autofilling values
+    if "fill_ftp" not in st.session_state:
+        st.session_state.fill_ftp = 100
+    if "fill_time" not in st.session_state:
+        st.session_state.fill_time = 400
+    if "fill_delta" not in st.session_state:
+        st.session_state.fill_delta = 300
+
+    col1, col2 = st.columns(2)
+    
+    def on_select_rider():
+        selected = st.session_state.get("sel_rider", "-- Select --")
+        if selected != "-- Select --":
+            user_records = df_all[df_all["Name"] == selected]
+            if not user_records.empty:
+                if "Date" in user_records.columns:
+                    user_records["Date"] = pd.to_datetime(user_records["Date"], errors="coerce")
+                    user_records = user_records.sort_values(by="Date", ascending=False)
+                latest = user_records.iloc[0]
+                st.session_state.fill_ftp = int(latest.get("FTP (W)", 100))
+                st.session_state.fill_time = int(latest.get("Segment Time (s)", 400))
+                st.session_state.fill_delta = int(latest.get("Delta_Estimate", 300))
+            # Clear text input if dropdown is used
+            st.session_state.typed_rider = ""
+
+    with col1:
+        selected_existing = st.selectbox("Select Existing Rider", options=["-- Select --"] + existing_names, key="sel_rider", on_change=on_select_rider)
+    with col2:
+        typed_new_name = st.text_input("Or Type New Name Here", key="typed_rider", help="Type your name if you are a new participant.")
+
     with st.form("entry_form"):
-        st.markdown("### Rider Details")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            selected_existing = st.selectbox("Select Existing Rider", options=["-- Select --"] + existing_names)
-        with col2:
-            typed_new_name = st.text_input("Or Type New Name Here", help="Type your name if you are a new participant.")
-        
-        ftp = st.number_input("Current FTP (Watts)", 0, 500, 100, help="Sustained 20-minute power output.")
-        time = st.number_input("Your actual completion time for the segment (in seconds).", 60, 3600, 400)
-        delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place.", 10, 1200, 300)
+        ftp = st.number_input("Current FTP (Watts)", 0, 500, value=st.session_state.fill_ftp, help="Sustained 20-minute power output.")
+        time = st.number_input("Your actual completion time for the segment (in seconds).", 60, 3600, value=st.session_state.fill_time)
+        delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place.", 10, 1200, value=st.session_state.fill_delta)
         
         submitted = st.form_submit_button("Submit Entry")
         
