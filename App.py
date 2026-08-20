@@ -146,7 +146,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-st.markdown(f"<div style='text-align: left; margin-top: 15px; font-size: 0.9rem;'>The active challenge segment is: <a href='{SEGMENT_URL}'>{SEGMENT_URL}</a></div>", unsafe_allow_html=True)
+st.markdown(f"<div style='text-align: left; margin-top: 25px; margin-bottom: 20px; font-size: 0.9rem;'>The active challenge segment is: <a href='{SEGMENT_URL}'>{SEGMENT_URL}</a></div>", unsafe_allow_html=True)
 
 # --- TABS ---
 tab_inst, tab_entry, tab_seed, tab_res, tab_faq, tab_admin = st.tabs(
