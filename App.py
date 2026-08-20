@@ -139,7 +139,7 @@ st.markdown("""
     <h1 style="margin: 0; text-align: center; flex-grow: 1;">Bulimba Roadies</h1>
     <span style="font-size: 2.5rem; visibility: hidden;">🚴‍♀️ 🚴‍♂️</span>
 </div>
-<div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 2px;">
+<div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
     <span style="font-size: 2.5rem; visibility: hidden;">🚴‍♂️ 🚴‍♀️</span>
     <h1 style="margin: 0; text-align: center; flex-grow: 1;">Monthly Challenge</h1>
     <span style="font-size: 2.5rem;">🚴‍♂️ 🚴‍♀️</span>
