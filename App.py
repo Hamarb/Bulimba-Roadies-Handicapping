@@ -177,7 +177,7 @@ with tab_inst:
 with tab_entry:
     st.header("Data Entry")
         
-    existing_names = get_existing_names()
+    existing_names = get_existing_names() # Already sorted alphabetically
     
     with st.form("entry_form", clear_on_submit=True):
         st.markdown("### Rider Details")
@@ -193,7 +193,6 @@ with tab_entry:
         delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place.", 10, 1200, 300)
         
         if st.form_submit_button("Submit Entry"):
-            # Resolve name: typed name takes priority if filled out, otherwise dropdown selection is used
             if typed_new_name.strip():
                 clean_name = typed_new_name.strip()
             elif selected_existing != "-- Select --":
@@ -359,24 +358,4 @@ with tab_admin:
         st.header("Admin Configuration & Submitter Tracking")
         segment_df = get_segment_data()
         
-        with st.form("segment_config_form"):
-            admin_name = st.text_input("Your Name")
-            new_url = st.text_input("Active Strava Segment URL", value=SEGMENT_URL)
-            
-            submitted = st.form_submit_button("Update Segment & Log Submitter")
-            
-            if submitted:
-                if not admin_name.strip():
-                    st.error("Please enter your First and Last Name.")
-                elif not new_url.strip():
-                    st.error("Please enter a valid Segment URL.")
-                else:
-                    if save_segment_submission(admin_name, new_url):
-                        st.success(f"Segment updated and logged successfully by {admin_name}!")
-                        st.rerun()
-        
-        st.subheader("Segment Configuration History")
-        if not segment_df.empty:
-            st.dataframe(segment_df.sort_values(by="Date", ascending=False).head(10), use_container_width=True, hide_index=True)
-        else:
-            st.write("No segment history available.")
+        with st.
