@@ -131,7 +131,10 @@ def format_time(sec):
     return f"0:{m:02d}:{s:02d}"
 
 SEGMENT_URL = get_segment_url()
-st.title("🚴‍♂️ Bulimba Roadies - Monthly Challenge")
+
+# --- SPLIT HEADER WITH FEMALE & MALE CYCLISTS ---
+st.title("🚴‍♀️ 🚴‍♂️ Bulimba Roadies")
+st.subheader("Monthly Challenge")
 st.markdown(f"**The active challenge segment is:** [{SEGMENT_URL}]({SEGMENT_URL})")
 
 # --- TABS ---
