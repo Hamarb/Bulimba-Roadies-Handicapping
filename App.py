@@ -205,7 +205,7 @@ with tab_entry:
             else:
                 df = load_data()
                 brisbane_tz = ZoneInfo("Australia/Brisbane")
-                today_str = datetime.now(brisbane_tz).strftime("%Y-%m-%d")
+                now_brisbane = datetime.now(brisbane_tz).strftime("%Y-%m-%d %H:%M:%S")
                 
                 new_entry = pd.DataFrame([{
                     "Name": clean_name, 
@@ -213,7 +213,7 @@ with tab_entry:
                     "Segment Time (s)": time, 
                     "Delta_Estimate": delta_est, 
                     "Segment": SEGMENT_URL,
-                    "Date": today_str
+                    "Date": now_brisbane
                 }])
                 
                 df = pd.concat([df[df["Name"] != clean_name], new_entry], ignore_index=True)
@@ -262,6 +262,10 @@ with tab_seed:
             
             deduplicated_df = segment_filtered.drop_duplicates(subset=["Name"], keep="first")
             seed_df = deduplicated_df.sort_values(by="FTP (W)", ascending=True)[["Name", "FTP (W)", "Date"]]
+            
+            # Format date timestamp nicely for display
+            seed_df["Date"] = seed_df["Date"].dt.strftime("%Y-%m-%d %H:%M:%S")
+            
             st.dataframe(seed_df, use_container_width=True, hide_index=True)
         else:
             st.info("No entries found for the currently active segment.")
