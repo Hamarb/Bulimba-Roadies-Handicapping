@@ -173,7 +173,7 @@ with tab_inst:
         | **The Slowest Rider** | Gets zero head start (Scratch) | Gets an inclusive baseline handicap slice |
         | **Fairness** | Rigid and prone to outdated metrics | Self-correcting and community-driven |
         """)
-        
+
 with tab_entry:
     st.header("Data Entry")
         
@@ -182,38 +182,34 @@ with tab_entry:
     with st.form("entry_form", clear_on_submit=True):
         st.markdown("### Rider Details")
         
-        # Use radio options, and display the text box cleanly right below it
-        name_mode = st.radio("Choose Entry Mode", options=["Select Existing Rider", "Type New Rider"])
-        
-        clean_name = ""
-        if name_mode == "Select Existing Rider":
-            if existing_names:
-                selected_name = st.selectbox("Choose your name", options=["-- Select --"] + existing_names)
-                if selected_name != "-- Select --":
-                    clean_name = selected_name
-            else:
-                st.info("No existing riders found. Please choose 'Type New Rider'.")
-        else:
-            typed_name = st.text_input("Enter your First and Last Name")
-            if typed_name:
-                clean_name = typed_name
+        col1, col2 = st.columns(2)
+        with col1:
+            selected_existing = st.selectbox("Select Existing Rider", options=["-- Select --"] + existing_names)
+        with col2:
+            typed_new_name = st.text_input("Or Type New Name Here", help="Type your name if you are a new participant.")
         
         ftp = st.number_input("Current FTP (Watts)", 0, 500, 100, help="Sustained 20-minute power output.")
         time = st.number_input("Your actual completion time for the segment (in seconds).", 60, 3600, 400)
         delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place.", 10, 1200, 300)
         
         if st.form_submit_button("Submit Entry"):
-            final_name_to_save = clean_name.strip()
-            
-            if not final_name_to_save: 
-                st.error("Please provide or select a valid Name!")
+            # Resolve name: typed name takes priority if filled out, otherwise dropdown selection is used
+            if typed_new_name.strip():
+                clean_name = typed_new_name.strip()
+            elif selected_existing != "-- Select --":
+                clean_name = selected_existing.strip()
+            else:
+                clean_name = ""
+                
+            if not clean_name: 
+                st.error("Please select an existing rider or type a new name!")
             else:
                 df = load_data()
                 brisbane_tz = ZoneInfo("Australia/Brisbane")
                 today_str = datetime.now(brisbane_tz).strftime("%Y-%m-%d")
                 
                 new_entry = pd.DataFrame([{
-                    "Name": final_name_to_save, 
+                    "Name": clean_name, 
                     "FTP (W)": ftp, 
                     "Segment Time (s)": time, 
                     "Delta_Estimate": delta_est, 
@@ -221,10 +217,10 @@ with tab_entry:
                     "Date": today_str
                 }])
                 
-                df = pd.concat([df[df["Name"] != final_name_to_save], new_entry], ignore_index=True)
+                df = pd.concat([df[df["Name"] != clean_name], new_entry], ignore_index=True)
                 save_data(df)
                 
-                st.success(f"Entry saved for {final_name_to_save}!")
+                st.success(f"Entry saved for {clean_name}!")
                 st.rerun()
 
     st.markdown("---")
