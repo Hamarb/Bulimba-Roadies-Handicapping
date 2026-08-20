@@ -196,59 +196,58 @@ with tab_entry:
     
     st.markdown("### Rider Details")
     
-    # Initialize session state keys for autofilling values
-    if "fill_ftp" not in st.session_state:
-        st.session_state.fill_ftp = 100
-    if "fill_time" not in st.session_state:
-        st.session_state.fill_time = 400
-    if "fill_delta" not in st.session_state:
-        st.session_state.fill_delta = 300
+    # Initialize session state tracking variables
+    if "selected_rider" not in st.session_state:
+        st.session_state.selected_rider = "-- Select --"
+    if "typed_rider" not in st.session_state:
+        st.session_state.typed_rider = ""
+    if "form_ftp" not in st.session_state:
+        st.session_state.form_ftp = 100
+    if "form_time" not in st.session_state:
+        st.session_state.form_time = 400
+    if "form_delta" not in st.session_state:
+        st.session_state.form_delta = 300
 
-    col1, col2 = st.columns(2)
-    
-    def on_select_rider():
-        selected = st.session_state.get("sel_rider", "-- Select --")
-        if selected != "-- Select --":
-            user_records = df_all[df_all["Name"] == selected]
+    def update_from_dropdown():
+        rider = st.session_state.sel_rider_box
+        if rider != "-- Select --":
+            st.session_state.selected_rider = rider
+            st.session_state.typed_rider = "" # Clear type input when picking from dropdown
+            user_records = df_all[df_all["Name"] == rider]
             if not user_records.empty:
                 if "Date" in user_records.columns:
                     user_records["Date"] = pd.to_datetime(user_records["Date"], errors="coerce")
                     user_records = user_records.sort_values(by="Date", ascending=False)
                 latest = user_records.iloc[0]
-                st.session_state.fill_ftp = int(latest.get("FTP (W)", 100))
-                st.session_state.fill_time = int(latest.get("Segment Time (s)", 400))
-                st.session_state.fill_delta = int(latest.get("Delta_Estimate", 300))
-            # Clear text input if dropdown is used
-            st.session_state.typed_rider = ""
+                st.session_state.form_ftp = int(latest.get("FTP (W)", 100))
+                st.session_state.form_time = int(latest.get("Segment Time (s)", 400))
+                st.session_state.form_delta = int(latest.get("Delta_Estimate", 300))
 
+    col1, col2 = st.columns(2)
     with col1:
-        selected_existing = st.selectbox("Select Existing Rider", options=["-- Select --"] + existing_names, key="sel_rider", on_change=on_select_rider)
+        st.selectbox("Select Existing Rider", options=["-- Select --"] + existing_names, key="sel_rider_box", on_change=update_from_dropdown)
     with col2:
-        typed_new_name = st.text_input("Or Type New Name Here", key="typed_rider", help="Type your name if you are a new participant.")
+        typed_new_name = st.text_input("Or Type New Name Here", key="typed_rider_box", help="Type your name if you are a new participant.")
+
+    # Determine final active name for saving
+    active_name = typed_new_name.strip() if typed_new_name.strip() else (st.session_state.sel_rider_box if st.session_state.sel_rider_box != "-- Select --" else "")
 
     with st.form("entry_form"):
-        ftp = st.number_input("Current FTP (Watts)", 0, 500, value=st.session_state.fill_ftp, help="Sustained 20-minute power output.")
-        time = st.number_input("Your actual completion time for the segment (in seconds).", 60, 3600, value=st.session_state.fill_time)
-        delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place.", 10, 1200, value=st.session_state.fill_delta)
+        ftp = st.number_input("Current FTP (Watts)", 0, 500, value=st.session_state.form_ftp, help="Sustained 20-minute power output.")
+        time = st.number_input("Your actual completion time for the segment (in seconds).", 60, 3600, value=st.session_state.form_time)
+        delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place.", 10, 1200, value=st.session_state.form_delta)
         
         submitted = st.form_submit_button("Submit Entry")
         
         if submitted:
-            if typed_new_name.strip():
-                clean_name = typed_new_name.strip()
-            elif selected_existing != "-- Select --":
-                clean_name = selected_existing.strip()
-            else:
-                clean_name = ""
-                
-            if not clean_name: 
+            if not active_name: 
                 st.error("Please select an existing rider or type a new name!")
             else:
                 brisbane_tz = ZoneInfo("Australia/Brisbane")
                 now_brisbane = datetime.now(brisbane_tz).strftime("%Y-%m-%d %H:%M:%S")
                 
                 new_entry = pd.DataFrame([{
-                    "Name": clean_name, 
+                    "Name": active_name, 
                     "FTP (W)": ftp, 
                     "Segment Time (s)": time, 
                     "Delta_Estimate": delta_est, 
@@ -257,10 +256,10 @@ with tab_entry:
                 }])
                 
                 df_all = load_data()
-                df_all = pd.concat([df_all[df_all["Name"] != clean_name], new_entry], ignore_index=True)
+                df_all = pd.concat([df_all[df_all["Name"] != active_name], new_entry], ignore_index=True)
                 save_data(df_all)
                 
-                st.success(f"Entry saved for {clean_name}!")
+                st.success(f"Entry saved for {active_name}!")
                 st.rerun()
 
     st.markdown("---")
