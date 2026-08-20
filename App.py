@@ -136,12 +136,12 @@ SEGMENT_URL = get_segment_url()
 st.markdown("""
 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
     <span style="font-size: 2.5rem;">🚴‍♀️ 🚴‍♂️</span>
-    <h1 style="margin: 0; text-align: center; flex-grow: 1;">Bulimba Roadies</h1>
+    <h1 style="margin: 0; padding: 0; text-align: center; flex-grow: 1; line-height: 1.1;">Bulimba Roadies</h1>
     <span style="font-size: 2.5rem; visibility: hidden;">🚴‍♀️ 🚴‍♂️</span>
 </div>
-<div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+<div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: -10px;">
     <span style="font-size: 2.5rem; visibility: hidden;">🚴‍♂️ 🚴‍♀️</span>
-    <h1 style="margin: 0; text-align: center; flex-grow: 1;">Monthly Challenge</h1>
+    <h1 style="margin: 0; padding: 0; text-align: center; flex-grow: 1; line-height: 1.1;">Monthly Challenge</h1>
     <span style="font-size: 2.5rem;">🚴‍♂️ 🚴‍♀️</span>
 </div>
 """, unsafe_allow_html=True)
