@@ -38,6 +38,19 @@ def load_data():
     except Exception:
         return pd.DataFrame(columns=expected_columns)
 
+def get_existing_names():
+    """Fetches a sorted list of unique participant names from the 'Entries' sheet."""
+    try:
+        df = load_data()
+        if not df.empty and "Name" in df.columns:
+            names = df["Name"].dropna().astype(str).str.strip().unique()
+            # Filter out empty strings
+            valid_names = [n for n in names if n]
+            return sorted(valid_names)
+    except Exception:
+        pass
+    return []
+    
 def save_data(df):
     """Saves the dataframe back to the 'Entries' worksheet."""
     try:
@@ -166,22 +179,35 @@ with tab_inst:
 
 with tab_entry:
     st.header("Data Entry")
+      
+    existing_names = get_existing_names()
+    
     with st.form("entry_form", clear_on_submit=True):
-        name = st.text_input("Your Name")
+        # Allow selecting an existing rider or typing/adding a new one if needed
+        # We provide a dropdown approach where they can type to search
+        name_options = ["-- Select or Type Name --"] + existing_names
+        selected_name = st.selectbox("Name", options=name_options, help="Type a few characters to search for your name.")
+        
+        # If they want to add a brand new name not in the list yet
+        new_name_input = st.text_input("Or enter a new name (if not in the dropdown above):")
+        
         ftp = st.number_input("Current FTP (Watts)", 0, 500, 100, help="Sustained 20-minute power output.")
         time = st.number_input("Your actual completion time for the segment (in seconds).", 60, 3600, 400)
         delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place.", 10, 1200, 300)
         
         if st.form_submit_button("Submit Entry"):
-            if not name.strip(): 
-                st.error("Name is required!")
+            # Determine final name string
+            final_name = new_name_input.strip() if new_name_input.strip() else selected_name
+            
+            if not final_name or final_name == "-- Select or Type Name --": 
+                st.error("Please select or enter a valid Name!")
             else:
                 df = load_data()
                 brisbane_tz = ZoneInfo("Australia/Brisbane")
                 today_str = datetime.now(brisbane_tz).strftime("%Y-%m-%d")
                 
                 new_entry = pd.DataFrame([{
-                    "Name": name, 
+                    "Name": final_name, 
                     "FTP (W)": ftp, 
                     "Segment Time (s)": time, 
                     "Delta_Estimate": delta_est, 
@@ -189,32 +215,33 @@ with tab_entry:
                     "Date": today_str
                 }])
                 
-                df = pd.concat([df[df["Name"] != name], new_entry], ignore_index=True)
+                df = pd.concat([df[df["Name"] != final_name], new_entry], ignore_index=True)
                 save_data(df)
                 
-                st.success("Entry saved!")
-                st.subheader("🗑️ Delete Your Entry")
+                st.success(f"Entry saved for {final_name}!")
+                st.rerun()
 
-    with st.form("delete_form"):
-        delete_name = st.text_input("Enter your exact registered Name to delete your data:")
-        confirm_delete = st.checkbox("I confirm I want to permanently remove my entry from this segment.")
-        
-        if st.form_submit_button("Delete My Record"):
-            if not delete_name.strip():
-                st.error("Please enter your name.")
-            elif not confirm_delete:
-                st.error("Please check the confirmation box.")
-            else:
-                df = load_data()
-                if delete_name in df["Name"].values:
-                    # Filter out the user's row
-                    df = df[df["Name"] != delete_name]
-                    save_data(df)
-                    st.success(f"Successfully deleted records for {delete_name}.")
-                    st.rerun()
+    st.markdown("---")
+    with st.expander("🗑️ Need to delete your entry?"):
+        with st.form("delete_form"):
+            existing_names_for_del = get_existing_names()
+            target_name = st.selectbox("Select your name to delete", options=["-- Select --"] + existing_names_for_del)
+            confirm_delete = st.checkbox("I confirm I want to permanently remove my entry.")
+            
+            if st.form_submit_button("Delete My Record"):
+                if target_name == "-- Select --":
+                    st.error("Please select your name.")
+                elif not confirm_delete:
+                    st.error("Please check the confirmation box.")
                 else:
-                    st.warning(f"No entry found for '{delete_name}'.")
-                    st.rerun()
+                    df = load_data()
+                    if target_name in df["Name"].values:
+                        df = df[df["Name"] != target_name]
+                        save_data(df)
+                        st.success(f"Successfully deleted records for {target_name}.")
+                        st.rerun()
+                    else:
+                        st.warning(f"No entry found for '{target_name}'.")
 
 with tab_seed:
     header_col1, header_col2 = st.columns([3, 1])
