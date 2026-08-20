@@ -140,8 +140,8 @@ tab_inst, tab_entry, tab_seed, tab_res, tab_faq, tab_admin = st.tabs(
 )
 
 with tab_inst:
-    st.info("Disclaimer: This application is a casual social experiment. Participation is entirely voluntary, and no one involved in the creation, hosting, or management of this app is legally or financially accountable for any outcomes, incidents, or errors. All submitted data remains available in the public domain. If you are concerned about privacy please use a different name. Stay safe and have fun!")
-        
+    st.info("Disclaimer: This application is a casual social experiment. Participation is entirely voluntary, and no one involved in the creation, hosting, or management of this app is legally or financially accountable for any outcomes, incidents, or errors. Stay safe and have fun!")
+    
     with st.expander("ℹ️ How is my handicap calculated?"):
         st.markdown("""
         ### 🚴‍♂️ How Dynamic Handicapping Works
@@ -173,7 +173,9 @@ with tab_inst:
         | **The Slowest Rider** | Gets zero head start (Scratch) | Gets an inclusive baseline handicap slice |
         | **Fairness** | Rigid and prone to outdated metrics | Self-correcting and community-driven |
         """)
-                
+        
+        st.markdown("All submitted data remains available in the public domain. If you are concerned about privacy please use a different name.")
+
 with tab_entry:
     st.header("Data Entry")
         
@@ -182,15 +184,33 @@ with tab_entry:
     with st.form("entry_form", clear_on_submit=True):
         st.markdown("### Rider Details")
         
-        name = st.text_input("Firstname Lastname", help="Type your name. If you've ridden before, make sure it matches your previous spelling.")
+        # --- AUTOCOMPLETE / DYNAMIC DROPDOWN FIELD ---
+        name_options = ["-- Select Existing Name --"] + existing_names + ["+ Type a New Name..."]
+        selected_name_choice = st.selectbox(
+            "Name", 
+            options=name_options, 
+            help="Type a few characters or scroll to find your name, or select '+ Type a New Name...' if you are new."
+        )
+        
+        custom_name = ""
+        if selected_name_choice == "+ Type a New Name...":
+            custom_name = st.text_input("Enter New Name (Firstname Lastname)")
+            
         ftp = st.number_input("Current FTP (Watts)", 0, 500, 100, help="Sustained 20-minute power output.")
         time = st.number_input("Your actual completion time for the segment (in seconds).", 60, 3600, 400)
         delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place.", 10, 1200, 300)
         
         if st.form_submit_button("Submit Entry"):
-            clean_name = name.strip()
+            # Resolve name selection
+            if selected_name_choice == "+ Type a New Name...":
+                clean_name = custom_name.strip()
+            elif selected_name_choice != "-- Select Existing Name --":
+                clean_name = selected_name_choice
+            else:
+                clean_name = ""
+                
             if not clean_name: 
-                st.error("Name is required!")
+                st.error("Please select or enter a valid Name!")
             else:
                 df = load_data()
                 brisbane_tz = ZoneInfo("Australia/Brisbane")
@@ -358,3 +378,13 @@ with tab_admin:
                     st.error("Please enter your First and Last Name.")
                 elif not new_url.strip():
                     st.error("Please enter a valid Segment URL.")
+                else:
+                    if save_segment_submission(admin_name, new_url):
+                        st.success(f"Segment updated and logged successfully by {admin_name}!")
+                        st.rerun()
+        
+        st.subheader("Segment Configuration History")
+        if not segment_df.empty:
+            st.dataframe(segment_df.sort_values(by="Date", ascending=False).head(10), use_container_width=True, hide_index=True)
+        else:
+            st.write("No segment history available.")
