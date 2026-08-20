@@ -189,7 +189,7 @@ with tab_inst:
         """)
 
 with tab_entry:
-    st.header("Data Entry")
+    # st.header("Data Entry")
         
     df_all = load_data()
     existing_names = get_existing_names()
