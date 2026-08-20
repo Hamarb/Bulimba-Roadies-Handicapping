@@ -8,8 +8,6 @@ from google.oauth2.service_account import Credentials
 
 st.set_page_config(page_title="Welcome to the Bulimba Roadies Monthly Challenge", page_icon="🚴‍♂️", layout="wide")
 
-st.markdown(f"**The active challenge segment is:** [{SEGMENT_URL}]({SEGMENT_URL})")
-
 # --- GOOGLE SHEETS SETUP VIA GSPREAD ---
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -122,6 +120,7 @@ def format_time(sec):
 
 SEGMENT_URL = get_segment_url()
 st.title("🚴‍♂️ Bulimba Roadies - Monthly Challenge")
+st.markdown(f"**The active challenge segment is:** [{SEGMENT_URL}]({SEGMENT_URL})")
 
 # --- TABS ---
 tab_inst, tab_entry, tab_seed, tab_res, tab_faq, tab_admin = st.tabs(
