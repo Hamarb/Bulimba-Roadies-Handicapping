@@ -8,30 +8,37 @@ from google.oauth2.service_account import Credentials
 
 st.set_page_config(page_title="Welcome to the Bulimba Roadies Monthly Challenge", page_icon="🚴‍♂️", layout="wide")
 
-# --- CUSTOM CSS FOR ENHANCED TAB VISIBILITY ---
+# --- CUSTOM CSS FOR HIGH-VISIBILITY, POPPING TABS ---
 st.markdown("""
 <style>
-    /* Style the tab labels */
+    /* Style all tabs with a distinct card-like appearance */
     .stTabs [data-baseweb="tab"] {
-        font-size: 1.1rem;
-        font-weight: 600;
-        padding-top: 10px;
-        padding-bottom: 10px;
-        padding-left: 20px;
-        padding-right: 20px;
-        background-color: #f1f3f5;
-        border-radius: 4px 4px 0px 0px;
-        margin-right: 4px;
-    }
-    
-    /* Style the active tab */
-    .stTabs [data-baseweb="tab"][aria-selected="true"] {
-        background-color: #ff4b4b;
-        color: white !important;
+        font-size: 1.15rem;
         font-weight: 700;
+        padding: 12px 24px;
+        background-color: #e9ecef;
+        color: #495057;
+        border: 2px solid #dee2e6;
+        border-radius: 8px 8px 0px 0px;
+        margin-right: 6px;
+        transition: all 0.2s ease-in-out;
     }
     
-    /* Style tab text color inside active tab */
+    /* Hover effect for inactive tabs */
+    .stTabs [data-baseweb="tab"]:hover {
+        background-color: #dee2e6;
+        color: #212529;
+    }
+    
+    /* Style the active selected tab so it pops dramatically */
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        background-color: #ff4b4b !important;
+        color: white !important;
+        border-color: #e63946 !important;
+        box-shadow: 0px -4px 10px rgba(255, 75, 75, 0.3);
+    }
+    
+    /* Ensure inner text in active tab inherits white color */
     .stTabs [data-baseweb="tab"][aria-selected="true"] div p {
         color: white !important;
     }
