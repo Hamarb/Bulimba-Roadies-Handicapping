@@ -132,17 +132,17 @@ def format_time(sec):
 
 SEGMENT_URL = get_segment_url()
 
-# --- SPLIT HEADER WITH FEMALE & MALE CYCLISTS ---
+# --- CUSTOM CENTERED HEADER WITH RIGHT-ALIGNED EMOJIS ON THE SECOND LINE ---
 st.markdown("""
 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-    <span style="font-size: 2.5rem;">🚴‍♀️ 🚴‍♂️</span>
-    <h1 style="margin: 0; text-align: center; flex-grow: 1;">Bulimba Roadies</h1>
     <span style="font-size: 2.5rem; visibility: hidden;">🚴‍♀️ 🚴‍♂️</span>
+    <h1 style="margin: 0; text-align: center; flex-grow: 1;">Bulimba Roadies</h1>
+    <span style="font-size: 2.5rem;">🚴‍♀️ 🚴‍♂️</span>
 </div>
 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 2px;">
-    <span style="font-size: 2.5rem;">🚴‍♂️ 🚴‍♀️</span>
-    <h1 style="margin: 0; text-align: center; flex-grow: 1;">Monthly Challenge</h2>
     <span style="font-size: 2.5rem; visibility: hidden;">🚴‍♂️ 🚴‍♀️</span>
+    <h1 style="margin: 0; text-align: center; flex-grow: 1;">Monthly Challenge</h1>
+    <span style="font-size: 2.5rem;">🚴‍♂️ 🚴‍♀️</span>
 </div>
 """, unsafe_allow_html=True)
 st.markdown(f"**The active challenge segment is:** [{SEGMENT_URL}]({SEGMENT_URL})")
