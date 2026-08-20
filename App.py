@@ -189,14 +189,13 @@ with tab_inst:
         """)
 
 with tab_entry:
-    # st.header("Data Entry")
+    st.header("Data Entry")
         
     df_all = load_data()
     existing_names = get_existing_names()
     
     st.markdown("### Rider Details")
     
-    # Initialize session state variables
     if "selected_rider" not in st.session_state:
         st.session_state.selected_rider = "-- Select --"
     if "typed_rider" not in st.session_state:
@@ -236,7 +235,6 @@ with tab_entry:
     with col2:
         typed_new_name = st.text_input("Or Type New Name Here", key="typed_rider_box", help="Type your name if you are a new participant.")
 
-    # Show notification banner if historical data was loaded successfully
     if st.session_state.loaded_from_history and st.session_state.sel_rider_box != "-- Select --":
         st.success(f"ℹ️ Form pre-loaded with the most recent submission data for **{st.session_state.sel_rider_box}**.")
 
@@ -269,7 +267,6 @@ with tab_entry:
                 df_all = pd.concat([df_all[df_all["Name"] != active_name], new_entry], ignore_index=True)
                 save_data(df_all)
                 
-                # Reset history flag on success
                 st.session_state.loaded_from_history = False
                 st.success(f"Entry saved for {active_name}!")
                 st.rerun()
@@ -309,12 +306,16 @@ with tab_seed:
         
         if not segment_filtered.empty:
             if "Date" in segment_filtered.columns:
-                segment_filtered["Date"] = pd.to_datetime(segment_filtered["Date"], errors="coerce")
-                segment_filtered = segment_filtered.sort_values(by="Date", ascending=False)
+                # Robust date parsing: handles standard format or falls back safely to string representation
+                parsed_dates = pd.to_datetime(segment_filtered["Date"], errors="coerce")
+                segment_filtered["Sort_Date"] = parsed_dates.fillna(pd.Timestamp.min)
+                segment_filtered = segment_filtered.sort_values(by="Sort_Date", ascending=False)
+                
+                # Format valid datetimes, leave any raw fallback strings intact
+                segment_filtered["Date"] = parsed_dates.dt.strftime("%Y-%m-%d %H:%M:%S").fillna(segment_filtered["Date"].astype(str))
             
             deduplicated_df = segment_filtered.drop_duplicates(subset=["Name"], keep="first")
             seed_df = deduplicated_df.sort_values(by="FTP (W)", ascending=True)[["Name", "FTP (W)", "Date"]]
-            seed_df["Date"] = seed_df["Date"].dt.strftime("%Y-%m-%d %H:%M:%S")
             st.dataframe(seed_df, use_container_width=True, hide_index=True)
         else:
             st.info("No entries found for the currently active segment.")
@@ -330,8 +331,9 @@ with tab_res:
         
         if not segment_filtered.empty:
             if "Date" in segment_filtered.columns:
-                segment_filtered["Date"] = pd.to_datetime(segment_filtered["Date"], errors="coerce")
-                segment_filtered = segment_filtered.sort_values(by="Date", ascending=False)
+                parsed_dates = pd.to_datetime(segment_filtered["Date"], errors="coerce")
+                segment_filtered["Sort_Date"] = parsed_dates.fillna(pd.Timestamp.min)
+                segment_filtered = segment_filtered.sort_values(by="Sort_Date", ascending=False)
             
             deduplicated_df = segment_filtered.drop_duplicates(subset=["Name"], keep="first")
             active = deduplicated_df[(deduplicated_df["Segment Time (s)"] > 0) & (deduplicated_df["Delta_Estimate"] > 0)].copy()
