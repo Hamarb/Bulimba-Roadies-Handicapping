@@ -184,33 +184,35 @@ with tab_entry:
     with st.form("entry_form", clear_on_submit=True):
         st.markdown("### Rider Details")
         
-        # --- AUTOCOMPLETE / DYNAMIC DROPDOWN FIELD ---
-        name_options = ["-- Select Existing Name --"] + existing_names + ["+ Type a New Name..."]
-        selected_name_choice = st.selectbox(
-            "Name", 
-            options=name_options, 
-            help="Type a few characters or scroll to find your name, or select '+ Type a New Name...' if you are new."
-        )
+        # Clean mode selector to choose between picking an existing name or typing a new one
+        name_mode = st.radio("Are you an existing rider?", options=["Select Existing Name", "Type a New Name"])
         
-        custom_name = ""
-        if selected_name_choice == "+ Type a New Name...":
-            custom_name = st.text_input("Enter New Name (Firstname Lastname)")
-            
+        if name_mode == "Select Existing Name":
+            if existing_names:
+                selected_name = st.selectbox("Choose your name", options=["-- Select --"] + existing_names)
+            else:
+                st.warning("No existing riders found yet. Please switch to 'Type a New Name'.")
+                selected_name = "-- Select --"
+            typed_name = ""
+        else:
+            typed_name = st.text_input("Enter your First and Last Name")
+            selected_name = "-- Select --"
+        
         ftp = st.number_input("Current FTP (Watts)", 0, 500, 100, help="Sustained 20-minute power output.")
         time = st.number_input("Your actual completion time for the segment (in seconds).", 60, 3600, 400)
         delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place.", 10, 1200, 300)
         
         if st.form_submit_button("Submit Entry"):
-            # Resolve name selection
-            if selected_name_choice == "+ Type a New Name...":
-                clean_name = custom_name.strip()
-            elif selected_name_choice != "-- Select Existing Name --":
-                clean_name = selected_name_choice
+            # Determine the clean name based on which mode was active
+            if name_mode == "Select Existing Name" and selected_name != "-- Select --":
+                clean_name = selected_name.strip()
+            elif name_mode == "Type a New Name" and typed_name.strip():
+                clean_name = typed_name.strip()
             else:
                 clean_name = ""
                 
             if not clean_name: 
-                st.error("Please select or enter a valid Name!")
+                st.error("Please provide or select a valid Name!")
             else:
                 df = load_data()
                 brisbane_tz = ZoneInfo("Australia/Brisbane")
