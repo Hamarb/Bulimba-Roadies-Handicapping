@@ -8,6 +8,8 @@ from google.oauth2.service_account import Credentials
 
 st.set_page_config(page_title="Welcome to the Bulimba Roadies Monthly Challenge", page_icon="🚴‍♂️", layout="wide")
 
+st.markdown(f"**The active challenge segment is:** [{SEGMENT_URL}]({SEGMENT_URL})")
+
 # --- GOOGLE SHEETS SETUP VIA GSPREAD ---
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -161,12 +163,10 @@ with tab_inst:
         | **Fairness** | Rigid and prone to outdated metrics | Self-correcting and community-driven |
         """)
         
-    st.markdown(f"**The active challenge segment is:** [{SEGMENT_URL}]({SEGMENT_URL})")
-    st.markdown("All submitted data remains available in the public domain. If you are concerned about privacy please use a different name.")
+        st.markdown("All submitted data remains available in the public domain. If you are concerned about privacy please use a different name.")
 
 with tab_entry:
     st.header("Data Entry")
-    st.markdown(f"**Active Challenge Segment:** [{SEGMENT_URL}]({SEGMENT_URL})")
     with st.form("entry_form", clear_on_submit=True):
         name = st.text_input("Your Name")
         ftp = st.number_input("Current FTP (Watts)", 0, 500, 100, help="Sustained 20-minute power output.")
