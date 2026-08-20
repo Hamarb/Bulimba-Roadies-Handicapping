@@ -192,7 +192,28 @@ with tab_entry:
                 df = pd.concat([df[df["Name"] != name], new_entry], ignore_index=True)
                 save_data(df)
                 
-                st.success("Entry saved to Google Sheets!")
+                st.success("Entry saved!")
+                st.subheader("🗑️ Delete Your Entry")
+
+with st.form("delete_form"):
+    delete_name = st.text_input("Enter your exact registered Name to delete your data:")
+    confirm_delete = st.checkbox("I confirm I want to permanently remove my entry from this segment.")
+    
+    if st.form_submit_button("Delete My Record"):
+        if not delete_name.strip():
+            st.error("Please enter your name.")
+        elif not confirm_delete:
+            st.error("Please check the confirmation box.")
+        else:
+            df = load_data()
+            if delete_name in df["Name"].values:
+                # Filter out the user's row
+                df = df[df["Name"] != delete_name]
+                save_data(df)
+                st.success(f"Successfully deleted records for {delete_name}.")
+                st.rerun()
+            else:
+                st.warning(f"No entry found for '{delete_name}'.")
                 st.rerun()
 
 with tab_seed:
