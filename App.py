@@ -133,8 +133,8 @@ def format_time(sec):
 SEGMENT_URL = get_segment_url()
 
 # --- SPLIT HEADER WITH FEMALE & MALE CYCLISTS ---
-st.title("🚴‍♀️🚴‍♂️ Bulimba Roadies")
-st.title("🚴‍♂️🚴‍♀️Monthly Challenge")
+st.markdown("<h1 style='text-align: center;'>🚴‍♀️ 🚴‍♂️ Bulimba Roadies</h1>", unsafe_allow_html=True)
+st.markdown("<h2 style='text-align: center;'>Monthly Challenge</h2>", unsafe_allow_html=True)
 st.markdown(f"**The active challenge segment is:** [{SEGMENT_URL}]({SEGMENT_URL})")
 
 # --- TABS ---
