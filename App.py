@@ -176,35 +176,48 @@ with tab_inst:
 
 with tab_entry:
     st.header("Data Entry")
-        
+    
+    # 1. Check existing records for pre-population
+    df_all = load_data()
     existing_names = get_existing_names()
     
+    # Let users optionally select an existing rider to load their previous active segment data
+    selected_lookup = st.selectbox("Quick-Select Existing Rider (Optional - pre-fills form)", options=["-- Select to autofill --"] + existing_names)
+    
+    default_ftp = 100
+    default_time = 400
+    default_delta = 300
+    default_name = ""
+    
+    if selected_lookup != "-- Select to autofill --":
+        default_name = selected_lookup
+        # Filter for this user and active segment to grab their most recent values
+        user_segment_records = df_all[(df_all["Name"] == selected_lookup) & (df_all["Segment"] == SEGMENT_URL)]
+        if not user_segment_records.empty:
+            latest_record = user_segment_records.iloc[-1]
+            default_ftp = int(latest_record.get("FTP (W)", 100))
+            default_time = int(latest_record.get("Segment Time (s)", 400))
+            default_delta = int(latest_record.get("Delta_Estimate", 300))
+        else:
+            # Check if they have an entry in *any* segment if none found for this specific segment
+            user_any_records = df_all[df_all["Name"] == selected_lookup]
+            if not user_any_records.empty:
+                latest_record = user_any_records.iloc[-1]
+                default_ftp = int(latest_record.get("FTP (W)", 100))
+
     with st.form("entry_form", clear_on_submit=True):
         st.markdown("### Rider Details")
         
-        col1, col2 = st.columns(2)
-        with col1:
-            selected_existing = st.selectbox("Select Existing Rider", options=["-- Select --"] + existing_names)
-        with col2:
-            typed_new_name = st.text_input("Or Type New Name Here", help="Type your name if you are a new participant.")
-        
-        ftp = st.number_input("Current FTP (Watts)", 0, 500, 100, help="Sustained 20-minute power output.")
-        time = st.number_input("Your actual completion time for the segment (in seconds).", 60, 3600, 400)
-        delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place.", 10, 1200, 300)
+        name = st.text_input("Firstname Lastname", value=default_name, help="Type your name or use the quick-select above.")
+        ftp = st.number_input("Current FTP (Watts)", 0, 500, default_ftp, help="Sustained 20-minute power output.")
+        time = st.number_input("Your actual completion time for the segment (in seconds).", 60, 3600, default_time)
+        delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place.", 10, 1200, default_delta)
         
         if st.form_submit_button("Submit Entry"):
-            # Resolve name: typed name takes priority if filled out, otherwise dropdown selection is used
-            if typed_new_name.strip():
-                clean_name = typed_new_name.strip()
-            elif selected_existing != "-- Select --":
-                clean_name = selected_existing.strip()
-            else:
-                clean_name = ""
-                
+            clean_name = name.strip()
             if not clean_name: 
-                st.error("Please select an existing rider or type a new name!")
+                st.error("Name is required!")
             else:
-                df = load_data()
                 brisbane_tz = ZoneInfo("Australia/Brisbane")
                 today_str = datetime.now(brisbane_tz).strftime("%Y-%m-%d")
                 
@@ -217,8 +230,9 @@ with tab_entry:
                     "Date": today_str
                 }])
                 
-                df = pd.concat([df[df["Name"] != clean_name], new_entry], ignore_index=True)
-                save_data(df)
+                df_all = load_data()
+                df_all = pd.concat([df_all[df_all["Name"] != clean_name], new_entry], ignore_index=True)
+                save_data(df_all)
                 
                 st.success(f"Entry saved for {clean_name}!")
                 st.rerun()
