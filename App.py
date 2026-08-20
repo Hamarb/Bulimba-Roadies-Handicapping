@@ -157,8 +157,6 @@ with tab_inst:
     st.info("Disclaimer: This application is a casual social experiment. Participation is entirely voluntary, and no one involved in the creation, hosting, or management of this app is legally or financially accountable for any outcomes, incidents, or errors. All submitted data remains available in the public domain. If you are concerned about privacy please use a different name. Stay safe and have fun!")
 
     st.markdown("""
-    **Instructions**
-    
     We have a love hate relationship with Strava. We all love the platform and how it presents our data. Unfortunately getting data out is more challenging. This app is a compromise that will evolve with use.
     
     1. Admin will set the "The active challenge segment".
