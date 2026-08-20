@@ -44,7 +44,6 @@ def get_existing_names():
         df = load_data()
         if not df.empty and "Name" in df.columns:
             names = df["Name"].dropna().astype(str).str.strip().unique()
-            # Filter out empty strings
             valid_names = [n for n in names if n]
             return sorted(valid_names)
     except Exception:
@@ -185,13 +184,7 @@ with tab_entry:
     with st.form("entry_form", clear_on_submit=True):
         st.markdown("### Rider Details")
         
-        # Helper hint showing who is already in the system
-        if existing_names:
-            st.caption(f"Existing riders to copy/spell correctly: {', '.join(existing_names)}")
-        
-        # Single name field
         name = st.text_input("Firstname Lastname", help="Type your name. If you've ridden before, make sure it matches your previous spelling.")
-        
         ftp = st.number_input("Current FTP (Watts)", 0, 500, 100, help="Sustained 20-minute power output.")
         time = st.number_input("Your actual completion time for the segment (in seconds).", 60, 3600, 400)
         delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place.", 10, 1200, 300)
@@ -214,7 +207,6 @@ with tab_entry:
                     "Date": today_str
                 }])
                 
-                # Overwrites if the exact name already exists for this submission cycle
                 df = pd.concat([df[df["Name"] != clean_name], new_entry], ignore_index=True)
                 save_data(df)
                 
@@ -252,18 +244,14 @@ with tab_seed:
         
     df = load_data()
     if not df.empty and "Segment" in df.columns:
-        # 1. Filter by active segment URL
         segment_filtered = df[df["Segment"] == SEGMENT_URL].copy()
         
         if not segment_filtered.empty:
-            # 2. If multiple entries exist for the same person on this segment, keep the most recent
             if "Date" in segment_filtered.columns:
                 segment_filtered["Date"] = pd.to_datetime(segment_filtered["Date"], errors="coerce")
                 segment_filtered = segment_filtered.sort_values(by="Date", ascending=False)
             
             deduplicated_df = segment_filtered.drop_duplicates(subset=["Name"], keep="first")
-            
-            # 3. Sort by FTP for seeding display
             seed_df = deduplicated_df.sort_values(by="FTP (W)", ascending=True)[["Name", "FTP (W)", "Date"]]
             st.dataframe(seed_df, use_container_width=True, hide_index=True)
         else:
@@ -276,27 +264,20 @@ with tab_res:
     df = load_data()
     
     if not df.empty and "Segment" in df.columns:
-        # 1. Filter by active segment URL
         segment_filtered = df[df["Segment"] == SEGMENT_URL].copy()
         
         if not segment_filtered.empty:
-            # 2. Keep only the most recent entry per rider for this segment
             if "Date" in segment_filtered.columns:
                 segment_filtered["Date"] = pd.to_datetime(segment_filtered["Date"], errors="coerce")
                 segment_filtered = segment_filtered.sort_values(by="Date", ascending=False)
             
             deduplicated_df = segment_filtered.drop_duplicates(subset=["Name"], keep="first")
-            
             active = deduplicated_df[(deduplicated_df["Segment Time (s)"] > 0) & (deduplicated_df["Delta_Estimate"] > 0)].copy()
             
             if not active.empty:
                 avg_delta = active["Delta_Estimate"].mean()
                 st.markdown(f"**Current average delta for this segment:** {int(avg_delta)} seconds.")
                 
-                # --- CORRECTED CURVE SORTING ---
-                # Sort FTP ascending (lowest to highest power), 
-                # and Segment Time descending (slowest actual time to fastest actual time) 
-                # so that actual fast riders are correctly positioned higher up the handicap penalty curve.
                 active = active.sort_values(by=["FTP (W)", "Segment Time (s)"], ascending=[True, False]).reset_index(drop=True)
                 count = len(active)
                 
@@ -312,7 +293,6 @@ with tab_res:
                 active["Handicap_Sec"] = handicaps
                 active["Adjusted_Sec"] = active["Segment Time (s)"] + active["Handicap_Sec"]
                 
-                # Final sort by Adjusted Time for podium ranking
                 active = active.sort_values(by="Adjusted_Sec").reset_index(drop=True)
                 active["Place"] = active.index + 1
                 
@@ -337,7 +317,6 @@ with tab_res:
 
 with tab_faq:
     st.header("Frequently Asked Questions")
-    
     faq_df = load_faq_data()
     
     if not faq_df.empty:
@@ -381,13 +360,3 @@ with tab_admin:
                     st.error("Please enter your First and Last Name.")
                 elif not new_url.strip():
                     st.error("Please enter a valid Segment URL.")
-                else:
-                    if save_segment_submission(admin_name, new_url):
-                        st.success(f"Segment updated and logged successfully by {admin_name}!")
-                        st.rerun()
-        
-        st.subheader("Segment Configuration History")
-        if not segment_df.empty:
-            st.dataframe(segment_df.sort_values(by="Date", ascending=False).head(10), use_container_width=True, hide_index=True)
-        else:
-            st.write("No segment history available.")
