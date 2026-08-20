@@ -179,35 +179,35 @@ with tab_inst:
 
 with tab_entry:
     st.header("Data Entry")
-      
+    st.markdown(f"**Active Challenge Segment:** [{SEGMENT_URL}]({SEGMENT_URL})")
+    
     existing_names = get_existing_names()
     
     with st.form("entry_form", clear_on_submit=True):
-        # Allow selecting an existing rider or typing/adding a new one if needed
-        # We provide a dropdown approach where they can type to search
-        name_options = ["-- Select or Type Name --"] + existing_names
-        selected_name = st.selectbox("Name", options=name_options, help="Type a few characters to search for your name.")
+        st.markdown("### Rider Details")
         
-        # If they want to add a brand new name not in the list yet
-        new_name_input = st.text_input("Or enter a new name (if not in the dropdown above):")
+        # Helper hint showing who is already in the system
+        if existing_names:
+            st.caption(f"Existing riders to copy/spell correctly: {', '.join(existing_names)}")
+        
+        # Single name field
+        name = st.text_input("Firstname Lastname", help="Type your name. If you've ridden before, make sure it matches your previous spelling.")
         
         ftp = st.number_input("Current FTP (Watts)", 0, 500, 100, help="Sustained 20-minute power output.")
         time = st.number_input("Your actual completion time for the segment (in seconds).", 60, 3600, 400)
         delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place.", 10, 1200, 300)
         
         if st.form_submit_button("Submit Entry"):
-            # Determine final name string
-            final_name = new_name_input.strip() if new_name_input.strip() else selected_name
-            
-            if not final_name or final_name == "-- Select or Type Name --": 
-                st.error("Please select or enter a valid Name!")
+            clean_name = name.strip()
+            if not clean_name: 
+                st.error("Name is required!")
             else:
                 df = load_data()
                 brisbane_tz = ZoneInfo("Australia/Brisbane")
                 today_str = datetime.now(brisbane_tz).strftime("%Y-%m-%d")
                 
                 new_entry = pd.DataFrame([{
-                    "Name": final_name, 
+                    "Name": clean_name, 
                     "FTP (W)": ftp, 
                     "Segment Time (s)": time, 
                     "Delta_Estimate": delta_est, 
@@ -215,10 +215,11 @@ with tab_entry:
                     "Date": today_str
                 }])
                 
-                df = pd.concat([df[df["Name"] != final_name], new_entry], ignore_index=True)
+                # Overwrites if the exact name already exists for this submission cycle
+                df = pd.concat([df[df["Name"] != clean_name], new_entry], ignore_index=True)
                 save_data(df)
                 
-                st.success(f"Entry saved for {final_name}!")
+                st.success(f"Entry saved for {clean_name}!")
                 st.rerun()
 
     st.markdown("---")
