@@ -62,7 +62,7 @@ def save_data(df):
 
 def get_segment_data():
     """Fetches segment configuration history from the 'Segment' worksheet."""
-    expected_columns = ["Firstname Lastname", "Segment URL", "Date"]
+    expected_columns = ["Name", "Segment URL", "Date"]
     try:
         sheet = init_connection().worksheet("Segment")
         data = sheet.get_all_records()
