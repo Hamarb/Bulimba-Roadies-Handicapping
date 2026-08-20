@@ -132,7 +132,7 @@ def format_time(sec):
 
 SEGMENT_URL = get_segment_url()
 
-# --- CUSTOM HEADER LAYOUT (Line 1: Emojis Left | Line 2: Emojis Right) ---
+# --- CUSTOM HEADER LAYOUT ---
 st.markdown("""
 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
     <span style="font-size: 2.5rem;">🚴‍♀️ 🚴‍♂️</span>
@@ -146,7 +146,6 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Left-aligned active challenge segment text
 st.markdown(f"<div style='text-align: left; margin-top: 15px;'><b>The active challenge segment is:</b> <a href='{SEGMENT_URL}'>{SEGMENT_URL}</a></div>", unsafe_allow_html=True)
 
 # --- TABS ---
@@ -192,50 +191,92 @@ with tab_inst:
 with tab_entry:
     st.header("Data Entry")
         
+    df_all = load_data()
     existing_names = get_existing_names()
     
-    with st.form("entry_form", clear_on_submit=True):
-        st.markdown("### Rider Details")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            selected_existing = st.selectbox("Select Existing Rider", options=["-- Select --"] + existing_names)
-        with col2:
-            typed_new_name = st.text_input("Or Type New Name Here", help="Type your name if you are a new participant.")
-        
-        ftp = st.number_input("Current FTP (Watts)", 0, 500, 100, help="Sustained 20-minute power output.")
-        time = st.number_input("Your actual completion time for the segment (in seconds).", 60, 3600, 400)
-        delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place.", 10, 1200, 300)
-        
-        if st.form_submit_button("Submit Entry"):
-            if typed_new_name.strip():
-                clean_name = typed_new_name.strip()
-            elif selected_existing != "-- Select --":
-                clean_name = selected_existing.strip()
-            else:
-                clean_name = ""
-                
-            if not clean_name: 
-                st.error("Please select an existing rider or type a new name!")
-            else:
-                df = load_data()
-                brisbane_tz = ZoneInfo("Australia/Brisbane")
-                now_brisbane = datetime.now(brisbane_tz).strftime("%Y-%m-%d %H:%M:%S")
-                
-                new_entry = pd.DataFrame([{
-                    "Name": clean_name, 
-                    "FTP (W)": ftp, 
-                    "Segment Time (s)": time, 
-                    "Delta_Estimate": delta_est, 
-                    "Segment": SEGMENT_URL,
-                    "Date": now_brisbane
-                }])
-                
-                df = pd.concat([df[df["Name"] != clean_name], new_entry], ignore_index=True)
-                save_data(df)
-                
-                st.success(f"Entry saved for {clean_name}!")
-                st.rerun()
+    # Pre-selection lookup for auto-filling and side-by-side display
+    selected_lookup = st.selectbox("Quick-Select Existing Rider (Optional - pre-fills form & views last submission)", options=["-- Select to look up / autofill --"] + existing_names)
+    
+    default_ftp = 100
+    default_time = 400
+    default_delta = 300
+    default_name = ""
+    latest_record = None
+    
+    if selected_lookup != "-- Select to look up / autofill --":
+        default_name = selected_lookup
+        user_records = df_all[df_all["Name"] == selected_lookup]
+        if not user_records.empty:
+            # Sort by date to grab the absolute latest entry
+            if "Date" in user_records.columns:
+                user_records["Date"] = pd.to_datetime(user_records["Date"], errors="coerce")
+                user_records = user_records.sort_values(by="Date", ascending=False)
+            latest_record = user_records.iloc[0]
+            default_ftp = int(latest_record.get("FTP (W)", 100))
+            default_time = int(latest_record.get("Segment Time (s)", 400))
+            default_delta = int(latest_record.get("Delta_Estimate", 300))
+
+    # Split into 2 columns: Left for Form, Right for Previous Submission Details
+    form_col, history_col = st.columns([1.2, 0.8])
+    
+    with form_col:
+        with st.form("entry_form", clear_on_submit=True):
+            st.markdown("### Rider Details")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                selected_existing = st.selectbox("Select Existing Rider", options=["-- Select --"] + existing_names)
+            with col2:
+                typed_new_name = st.text_input("Or Type New Name Here", value=default_name, help="Type your name if you are a new participant.")
+            
+            ftp = st.number_input("Current FTP (Watts)", 0, 500, default_ftp, help="Sustained 20-minute power output.")
+            time = st.number_input("Your actual completion time for the segment (in seconds).", 60, 3600, default_time)
+            delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place.", 10, 1200, default_delta)
+            
+            if st.form_submit_button("Submit Entry"):
+                if typed_new_name.strip():
+                    clean_name = typed_new_name.strip()
+                elif selected_existing != "-- Select --":
+                    clean_name = selected_existing.strip()
+                else:
+                    clean_name = ""
+                    
+                if not clean_name: 
+                    st.error("Please select an existing rider or type a new name!")
+                else:
+                    brisbane_tz = ZoneInfo("Australia/Brisbane")
+                    now_brisbane = datetime.now(brisbane_tz).strftime("%Y-%m-%d %H:%M:%S")
+                    
+                    new_entry = pd.DataFrame([{
+                        "Name": clean_name, 
+                        "FTP (W)": ftp, 
+                        "Segment Time (s)": time, 
+                        "Delta_Estimate": delta_est, 
+                        "Segment": SEGMENT_URL,
+                        "Date": now_brisbane
+                    }])
+                    
+                    df_all = load_data()
+                    df_all = pd.concat([df_all[df_all["Name"] != clean_name], new_entry], ignore_index=True)
+                    save_data(df_all)
+                    
+                    st.success(f"Entry saved for {clean_name}!")
+                    st.rerun()
+
+    with history_col:
+        st.markdown("### 📋 Latest Submission")
+        if selected_lookup != "-- Select to look up / autofill --" and latest_record is not None:
+            st.info(f"Showing last recorded stats for **{selected_lookup}**:")
+            st.metric("FTP", f"{int(latest_record.get('FTP (W)', 0))} W")
+            st.metric("Segment Time", format_time(int(latest_record.get('Segment Time (s)', 0))))
+            st.metric("Estimated Delta", f"{int(latest_record.get('Delta_Estimate', 0))} sec")
+            
+            rec_date = str(latest_record.get('Date', 'N/A'))
+            rec_seg = str(latest_record.get('Segment', 'N/A'))
+            st.caption(f"**Submitted On:** {rec_date}")
+            st.caption(f"**Segment:** [Link]({rec_seg})")
+        else:
+            st.markdown("<div style='padding: 20px; background-color: #f8f9fa; border-radius: 5px; color: #6c757d; text-align: center;'>Select a rider above to view their previous submission details here.</div>", unsafe_allow_html=True)
 
     st.markdown("---")
     with st.expander("🗑️ Need to delete your entry?"):
@@ -314,3 +355,86 @@ with tab_res:
                     else:
                         h = 0.0
                     handicaps.append(round(h))
+                    
+                active["Handicap_Sec"] = handicaps
+                active["Adjusted_Sec"] = active["Segment Time (s)"] + active["Handicap_Sec"]
+                
+                active = active.sort_values(by="Adjusted_Sec").reset_index(drop=True)
+                active["Place"] = active.index + 1
+                
+                display = active.copy()
+                display["Actual Time"] = display["Segment Time (s)"].apply(format_time)
+                display["Handicap"] = display["Handicap_Sec"].apply(format_time)
+                display["Adjusted Time"] = display["Adjusted_Sec"].apply(format_time)
+                st.dataframe(display[["Place", "Name", "Actual Time", "Handicap", "Adjusted Time"]], use_container_width=True, hide_index=True)
+
+                if st.button("📋 Generate Facebook Summary"):
+                    summary = f"### 🏆 Monthly Challenge Summary\n**Period:** {datetime.now().strftime('%m/%Y')}\n**Current Average Delta:** {int(avg_delta)} seconds\n\n| Place | Name | Actual Time | Handicap | Adjusted Time |\n| :--- | :--- | :--- | :--- | :--- |\n"
+                    for _, row in display.iterrows():
+                        summary += f"| {row['Place']} | {row['Name']} | {row['Actual Time']} | {row['Handicap']} | {row['Adjusted Time']} |\n"
+                    summary += f"\nCheck out the active challenge segment details here: {SEGMENT_URL}"
+                    st.code(summary, language="markdown")
+            else:
+                st.info("No valid segment times or delta estimates found for this segment yet.")
+        else:
+            st.info("No challenge results recorded for the currently active segment.")
+    else:
+        st.info("No data available.")
+
+with tab_faq:
+    st.header("Frequently Asked Questions")
+    faq_df = load_faq_data()
+    
+    if not faq_df.empty:
+        for _, row in faq_df.iterrows():
+            if str(row["Question"]).strip():
+                with st.expander(str(row["Question"])): 
+                    st.write(str(row["Answer"]))
+    else:
+        st.info("No FAQs available yet.")
+        
+    st.markdown("---")
+    q = st.text_input("Submit a question:")
+    
+    if st.button("Submit Question"):
+        if not q.strip():
+            st.error("Question cannot be empty.")
+        elif is_inappropriate(q):
+            st.error("Keep it constructive.")
+        elif not faq_df.empty and q in faq_df["Question"].values:
+            st.warning("This question has already been submitted.")
+        else:
+            new_q = pd.DataFrame([{"Question": q, "Answer": "Response pending"}])
+            faq_df = pd.concat([faq_df, new_q], ignore_index=True)
+            save_faq_data(faq_df)
+            st.success("Question submitted! It will appear here once reviewed.")
+            st.rerun()
+
+with tab_admin:
+    if st.checkbox("Show Admin Segment Controls"):
+        st.header("Admin Configuration & Submitter Tracking")
+        segment_df = get_segment_data()
+        
+        with st.form("segment_config_form"):
+            admin_names_list = get_existing_names()
+            
+            admin_col1, admin_col2 = st.columns(2)
+            with admin_col1:
+                selected_admin_existing = st.selectbox("Select Existing Admin Name", options=["-- Select --"] + admin_names_list)
+            with admin_col2:
+                typed_admin_new = st.text_input("Or Type New Admin Name", help="Type your name if you are a new admin.")
+            
+            new_url = st.text_input("Active Strava Segment URL", value=SEGMENT_URL)
+            
+            submitted = st.form_submit_button("Update Segment & Log Submitter")
+            
+            if submitted:
+                if typed_admin_new.strip():
+                    admin_name = typed_admin_new.strip()
+                elif selected_admin_existing != "-- Select --":
+                    admin_name = selected_admin_existing.strip()
+                else:
+                    admin_name = ""
+
+                if not admin_name:
+                    st.error("Please select an existing admin name or type a new name.")
