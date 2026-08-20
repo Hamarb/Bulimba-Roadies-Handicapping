@@ -8,49 +8,44 @@ from google.oauth2.service_account import Credentials
 
 st.set_page_config(page_title="Welcome to the Bulimba Roadies Monthly Challenge", page_icon="🚴‍♂️", layout="wide")
 
-# --- CUSTOM CSS FOR BOLD, HIGH-CONTRAST TABS ---
+# --- HIGH-VISIBILITY POPPING TAB CSS ---
 st.markdown("""
 <style>
-    /* Target the overall tab container wrapper */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background-color: #e9ecef;
-        padding: 8px;
-        border-radius: 12px;
+    /* Force tab list container to stand out */
+    div.stTabs [data-baseweb="tab-list"] {
+        gap: 12px;
+        background-color: #dee2e6;
+        padding: 10px;
+        border-radius: 10px;
     }
 
-    /* Style for individual inactive tabs */
-    .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        background-color: #ffffff;
-        border-radius: 8px;
+    /* Inactive tabs styling */
+    div.stTabs [data-baseweb="tab"] {
+        background-color: #ffffff !important;
+        border: 2px solid #adb5bd !important;
+        border-radius: 6px !important;
         color: #212529 !important;
-        font-size: 1.1rem;
-        font-weight: 700;
-        padding: 0px 24px;
-        border: 2px solid #ced4da;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        transition: all 0.2s ease;
+        padding: 10px 20px !important;
+        font-weight: 700 !important;
     }
 
-    /* Hover effect */
-    .stTabs [data-baseweb="tab"]:hover {
-        background-color: #f8f9fa;
-        border-color: #adb5bd;
-        color: #000000 !important;
+    /* Hover style */
+    div.stTabs [data-baseweb="tab"]:hover {
+        background-color: #f1f3f5 !important;
+        border-color: #6c757d !important;
     }
 
-    /* Style for the active selected tab (High Visibility Pop) */
-    .stTabs [data-baseweb="tab"][aria-selected="true"] {
-        background: linear-gradient(135deg, #ff4b4b 0%, #d90429 100%) !important;
-        color: white !important;
+    /* Active selected tab - Extreme High Pop */
+    div.stTabs [data-baseweb="tab"][aria-selected="true"] {
+        background-color: #ff4b4b !important;
         border: 2px solid #b7091c !important;
-        box-shadow: 0 4px 12px rgba(217, 4, 41, 0.4) !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 12px rgba(255, 75, 75, 0.5);
     }
 
-    /* Force text inside the active tab to be crisp white */
-    .stTabs [data-baseweb="tab"][aria-selected="true"] div p {
-        color: white !important;
+    /* Force text inside active tab to be pure white */
+    div.stTabs [data-baseweb="tab"][aria-selected="true"] p {
+        color: #ffffff !important;
     }
 </style>
 """, unsafe_allow_html=True)
