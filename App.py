@@ -197,59 +197,94 @@ with tab_entry:
                 st.rerun()
 
 with tab_seed:
-    st.header("Seeding Order")
+    header_col1, header_col2 = st.columns([3, 1])
+    with header_col1:
+        st.header("Seeding Order")
+    with header_col2:
+        st.caption(f"Active Segment Focus")
+        
     df = load_data()
-    if not df.empty and "FTP (W)" in df.columns:
-        seed_df = df.sort_values(by="FTP (W)", ascending=True)[["Name", "FTP (W)", "Date", "Segment"]]
-        st.dataframe(seed_df, use_container_width=True, hide_index=True)
+    if not df.empty and "Segment" in df.columns:
+        # 1. Filter by active segment URL
+        segment_filtered = df[df["Segment"] == SEGMENT_URL].copy()
+        
+        if not segment_filtered.empty:
+            # 2. If multiple entries exist for the same person on this segment, keep the most recent
+            if "Date" in segment_filtered.columns:
+                segment_filtered["Date"] = pd.to_datetime(segment_filtered["Date"], errors="coerce")
+                segment_filtered = segment_filtered.sort_values(by="Date", ascending=False)
+            
+            deduplicated_df = segment_filtered.drop_duplicates(subset=["Name"], keep="first")
+            
+            # 3. Sort by FTP for seeding display
+            seed_df = deduplicated_df.sort_values(by="FTP (W)", ascending=True)[["Name", "FTP (W)", "Date"]]
+            st.dataframe(seed_df, use_container_width=True, hide_index=True)
+        else:
+            st.info("No entries found for the currently active segment.")
     else:
         st.info("No data available.")
 
 with tab_res:
     st.header("Challenge Results")
     df = load_data()
-    active = df[(df["Segment Time (s)"] > 0) & (df["Delta_Estimate"] > 0)].copy()
     
-    if not active.empty:
-        avg_delta = active["Delta_Estimate"].mean()
-        st.markdown(f"**Current average delta:** {int(avg_delta)} seconds.")
+    if not df.empty and "Segment" in df.columns:
+        # 1. Filter by active segment URL
+        segment_filtered = df[df["Segment"] == SEGMENT_URL].copy()
         
-        # Sort by FTP ascending (lowest to highest power), 
-        # and Segment Time descending (slowest actual time to fastest actual time) 
-        # so that actual fast riders are correctly positioned higher up the handicap penalty curve.
-        active = active.sort_values(by=["FTP (W)", "Segment Time (s)"], ascending=[True, False]).reset_index(drop=True)
-        count = len(active)
-        
-        base_slice = avg_delta / count
-        handicaps = []
-        
-        for i in range(count):
-            if count > 1:
-                # Invert the curve: Index 0 (lowest FTP / slowest expected) gets the smallest handicap/head start, 
-                # while index count-1 (highest FTP / fastest expected) gets the largest handicap penalty.
-                h = base_slice + (avg_delta - base_slice) * (i / (count - 1))
-            else:
-                h = 0.0
-            handicaps.append(round(h))
+        if not segment_filtered.empty:
+            # 2. Keep only the most recent entry per rider for this segment
+            if "Date" in segment_filtered.columns:
+                segment_filtered["Date"] = pd.to_datetime(segment_filtered["Date"], errors="coerce")
+                segment_filtered = segment_filtered.sort_values(by="Date", ascending=False)
             
-        active["Handicap_Sec"] = handicaps
-        active["Adjusted_Sec"] = active["Segment Time (s)"] + active["Handicap_Sec"]
-        
-        active = active.sort_values(by="Adjusted_Sec").reset_index(drop=True)
-        active["Place"] = active.index + 1
-        
-        display = active.copy()
-        display["Actual Time"] = display["Segment Time (s)"].apply(format_time)
-        display["Handicap"] = display["Handicap_Sec"].apply(format_time)
-        display["Adjusted Time"] = display["Adjusted_Sec"].apply(format_time)
-        st.dataframe(display[["Place", "Name", "Actual Time", "Handicap", "Adjusted Time"]], use_container_width=True, hide_index=True)
+            deduplicated_df = segment_filtered.drop_duplicates(subset=["Name"], keep="first")
+            
+            active = deduplicated_df[(deduplicated_df["Segment Time (s)"] > 0) & (deduplicated_df["Delta_Estimate"] > 0)].copy()
+            
+            if not active.empty:
+                avg_delta = active["Delta_Estimate"].mean()
+                st.markdown(f"**Current average delta for this segment:** {int(avg_delta)} seconds.")
+                
+                # --- CORRECTED CURVE SORTING ---
+                # Sort FTP ascending (lowest to highest power), 
+                # and Segment Time descending (slowest actual time to fastest actual time) 
+                # so that actual fast riders are correctly positioned higher up the handicap penalty curve.
+                active = active.sort_values(by=["FTP (W)", "Segment Time (s)"], ascending=[True, False]).reset_index(drop=True)
+                count = len(active)
+                
+                base_slice = avg_delta / count
+                handicaps = []
+                for i in range(count):
+                    if count > 1:
+                        h = base_slice + (avg_delta - base_slice) * (i / (count - 1))
+                    else:
+                        h = 0.0
+                    handicaps.append(round(h))
+                    
+                active["Handicap_Sec"] = handicaps
+                active["Adjusted_Sec"] = active["Segment Time (s)"] + active["Handicap_Sec"]
+                
+                # Final sort by Adjusted Time for podium ranking
+                active = active.sort_values(by="Adjusted_Sec").reset_index(drop=True)
+                active["Place"] = active.index + 1
+                
+                display = active.copy()
+                display["Actual Time"] = display["Segment Time (s)"].apply(format_time)
+                display["Handicap"] = display["Handicap_Sec"].apply(format_time)
+                display["Adjusted Time"] = display["Adjusted_Sec"].apply(format_time)
+                st.dataframe(display[["Place", "Name", "Actual Time", "Handicap", "Adjusted Time"]], use_container_width=True, hide_index=True)
 
-        if st.button("📋 Generate Facebook Summary"):
-            summary = f"### 🏆 Monthly Challenge Summary\n**Period:** {datetime.now().strftime('%m/%Y')}\n**Current Average Delta:** {int(avg_delta)} seconds\n\n| Place | Name | Actual Time | Handicap | Adjusted Time |\n| :--- | :--- | :--- | :--- | :--- |\n"
-            for _, row in display.iterrows():
-                summary += f"| {row['Place']} | {row['Name']} | {row['Actual Time']} | {row['Handicap']} | {row['Adjusted Time']} |\n"
-            summary += f"\nCheck out the active challenge segment details here: {SEGMENT_URL}"
-            st.code(summary, language="markdown")
+                if st.button("📋 Generate Facebook Summary"):
+                    summary = f"### 🏆 Monthly Challenge Summary\n**Period:** {datetime.now().strftime('%m/%Y')}\n**Current Average Delta:** {int(avg_delta)} seconds\n\n| Place | Name | Actual Time | Handicap | Adjusted Time |\n| :--- | :--- | :--- | :--- | :--- |\n"
+                    for _, row in display.iterrows():
+                        summary += f"| {row['Place']} | {row['Name']} | {row['Actual Time']} | {row['Handicap']} | {row['Adjusted Time']} |\n"
+                    summary += f"\nCheck out the active challenge segment details here: {SEGMENT_URL}"
+                    st.code(summary, language="markdown")
+            else:
+                st.info("No valid segment times or delta estimates found for this segment yet.")
+        else:
+            st.info("No challenge results recorded for the currently active segment.")
     else:
         st.info("No data available.")
 
