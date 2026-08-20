@@ -127,7 +127,7 @@ tab_inst, tab_entry, tab_seed, tab_res, tab_faq, tab_admin = st.tabs(
 )
 
 with tab_inst:
-    st.info("Disclaimer: This application is a casual social experiment. Participation is entirely voluntary, and no one involved in the creation, hosting, or management of this app is legally or financially accountable for any outcomes, incidents, or errors.")
+    st.info("Disclaimer: This application is a casual social experiment. Participation is entirely voluntary, and no one involved in the creation, hosting, or management of this app is legally or financially accountable for any outcomes, incidents, or errors. Stay safe and have fun!")
     
     with st.expander("ℹ️ How is my handicap calculated?"):
         st.markdown("""
@@ -136,14 +136,14 @@ with tab_inst:
         
         Instead of rigid, hard-coded start times, every handicap is calculated through four simple steps:
         
-        1. **The Group Delta Estimate (Community Powered)** To submit actual times for each challenge, everyone also provides a personal estimate of the Delta (the time gap in seconds between the fastest and slowest rider). We take the average of all submissions to create our official Group Estimated Delta.
+        1. **Delta Estimate (Community Powered)** To submit actual times for each challenge, everyone also provides a personal estimate of the Delta (the time gap in seconds between the fastest and slowest rider). We take the average of all submissions to create our official Group Estimated Delta.
            
-        2. **Seeding from Fastest to Slowest** Using your submitted FTP, participants are sorted from lowest to highest. Your FTP isn't the competition; it is used to allocate your handicap relative to all participants. 
+        2. **Seeding** Using your submitted FTP, participants are sorted from lowest to highest. Your FTP isn't the competition; it is used to allocate your handicap relative to all participants. However, the FTP that you submit will be visible to all participants.
            
-        3. **The Inclusive Handicap Curve** Everyone receives a calculated handicap designed to level the playing field. The person with the highest FTP receives the maximum handicap penalty (the full Group Estimated Delta). Every other rider receives a scaled handicap based on their position in the field.  
+        3. **Inclusive Handicap** Everyone receives a calculated handicap designed to level the playing field. The person with the highest FTP receives the maximum handicap penalty (the full Group Estimated Delta). Every other rider receives a scaled handicap based on their position in the field.  
            The person with the lowest FTP still receives a handicap (Group Estimated Delta divided by the total participant count), ensuring no one sits at zero and the exact same formula applies equally to all members.
            
-        4. **The Adjusted Finish** Your official adjusted time is calculated by adding your calculated handicap to your actual segment time:
+        4. **Results** Your official adjusted time is calculated by adding your calculated handicap to your actual segment time:
 
             *Adjusted Time = Actual Time + Handicap*
 
@@ -162,13 +162,13 @@ with tab_inst:
         """)
         
     st.markdown(f"**The active challenge segment is:** [{SEGMENT_URL}]({SEGMENT_URL})")
-    st.markdown("All submitted participant data is securely stored via Google Sheets.")
+    st.markdown("All submitted data remains available in the public domain. If you are concerned about privacy please use a different name.")
 
 with tab_entry:
     st.header("Data Entry")
     st.markdown(f"**Active Challenge Segment:** [{SEGMENT_URL}]({SEGMENT_URL})")
     with st.form("entry_form", clear_on_submit=True):
-        name = st.text_input("Firstname Lastname")
+        name = st.text_input("Your Name")
         ftp = st.number_input("Current FTP (Watts)", 0, 500, 100, help="Sustained 20-minute power output.")
         time = st.number_input("Your actual completion time for the segment (in seconds).", 60, 3600, 400)
         delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place.", 10, 1200, 300)
@@ -289,7 +289,7 @@ with tab_admin:
         segment_df = get_segment_data()
         
         with st.form("segment_config_form"):
-            admin_name = st.text_input("Your Name (Firstname Lastname)")
+            admin_name = st.text_input("Your Name")
             new_url = st.text_input("Active Strava Segment URL", value=SEGMENT_URL)
             
             submitted = st.form_submit_button("Update Segment & Log Submitter")
