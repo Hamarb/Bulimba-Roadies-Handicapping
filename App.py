@@ -140,7 +140,7 @@ tab_inst, tab_entry, tab_seed, tab_res, tab_faq, tab_admin = st.tabs(
 )
 
 with tab_inst:
-    st.info("Disclaimer: This application is a casual social experiment. Participation is entirely voluntary, and no one involved in the creation, hosting, or management of this app is legally or financially accountable for any outcomes, incidents, or errors. Stay safe and have fun!")
+    st.info("Disclaimer: This application is a casual social experiment. Participation is entirely voluntary, and no one involved in the creation, hosting, or management of this app is legally or financially accountable for any outcomes, incidents, or errors. All submitted data remains available in the public domain. If you are concerned about privacy please use a different name. Stay safe and have fun!")
     
     with st.expander("ℹ️ How is my handicap calculated?"):
         st.markdown("""
@@ -174,8 +174,6 @@ with tab_inst:
         | **Fairness** | Rigid and prone to outdated metrics | Self-correcting and community-driven |
         """)
         
-        st.markdown("All submitted data remains available in the public domain. If you are concerned about privacy please use a different name.")
-
 with tab_entry:
     st.header("Data Entry")
         
