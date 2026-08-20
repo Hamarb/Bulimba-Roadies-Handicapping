@@ -196,7 +196,7 @@ with tab_entry:
     
     st.markdown("### Rider Details")
     
-    # Initialize session state tracking variables
+    # Initialize session state variables
     if "selected_rider" not in st.session_state:
         st.session_state.selected_rider = "-- Select --"
     if "typed_rider" not in st.session_state:
@@ -207,12 +207,14 @@ with tab_entry:
         st.session_state.form_time = 400
     if "form_delta" not in st.session_state:
         st.session_state.form_delta = 300
+    if "loaded_from_history" not in st.session_state:
+        st.session_state.loaded_from_history = False
 
     def update_from_dropdown():
         rider = st.session_state.sel_rider_box
         if rider != "-- Select --":
             st.session_state.selected_rider = rider
-            st.session_state.typed_rider = "" # Clear type input when picking from dropdown
+            st.session_state.typed_rider = ""
             user_records = df_all[df_all["Name"] == rider]
             if not user_records.empty:
                 if "Date" in user_records.columns:
@@ -222,6 +224,11 @@ with tab_entry:
                 st.session_state.form_ftp = int(latest.get("FTP (W)", 100))
                 st.session_state.form_time = int(latest.get("Segment Time (s)", 400))
                 st.session_state.form_delta = int(latest.get("Delta_Estimate", 300))
+                st.session_state.loaded_from_history = True
+            else:
+                st.session_state.loaded_from_history = False
+        else:
+            st.session_state.loaded_from_history = False
 
     col1, col2 = st.columns(2)
     with col1:
@@ -229,7 +236,10 @@ with tab_entry:
     with col2:
         typed_new_name = st.text_input("Or Type New Name Here", key="typed_rider_box", help="Type your name if you are a new participant.")
 
-    # Determine final active name for saving
+    # Show notification banner if historical data was loaded successfully
+    if st.session_state.loaded_from_history and st.session_state.sel_rider_box != "-- Select --":
+        st.success(f"ℹ️ Form pre-loaded with the most recent submission data for **{st.session_state.sel_rider_box}**.")
+
     active_name = typed_new_name.strip() if typed_new_name.strip() else (st.session_state.sel_rider_box if st.session_state.sel_rider_box != "-- Select --" else "")
 
     with st.form("entry_form"):
@@ -259,6 +269,8 @@ with tab_entry:
                 df_all = pd.concat([df_all[df_all["Name"] != active_name], new_entry], ignore_index=True)
                 save_data(df_all)
                 
+                # Reset history flag on success
+                st.session_state.loaded_from_history = False
                 st.success(f"Entry saved for {active_name}!")
                 st.rerun()
 
@@ -353,84 +365,4 @@ with tab_res:
                 st.dataframe(display[["Place", "Name", "Actual Time", "Handicap", "Adjusted Time"]], use_container_width=True, hide_index=True)
 
                 if st.button("📋 Generate Facebook Summary"):
-                    summary = f"### 🏆 Monthly Challenge Summary\n**Period:** {datetime.now().strftime('%m/%Y')}\n**Current Average Delta:** {int(avg_delta)} seconds\n\n| Place | Name | Actual Time | Handicap | Adjusted Time |\n| :--- | :--- | :--- | :--- | :--- |\n"
-                    for _, row in display.iterrows():
-                        summary += f"| {row['Place']} | {row['Name']} | {row['Actual Time']} | {row['Handicap']} | {row['Adjusted Time']} |\n"
-                    summary += f"\nCheck out the active challenge segment details here: {SEGMENT_URL}"
-                    st.code(summary, language="markdown")
-            else:
-                st.info("No valid segment times or delta estimates found for this segment yet.")
-        else:
-            st.info("No challenge results recorded for the currently active segment.")
-    else:
-        st.info("No data available.")
-
-with tab_faq:
-    st.header("Frequently Asked Questions")
-    faq_df = load_faq_data()
-    
-    if not faq_df.empty:
-        for _, row in faq_df.iterrows():
-            if str(row["Question"]).strip():
-                with st.expander(str(row["Question"])): 
-                    st.write(str(row["Answer"]))
-    else:
-        st.info("No FAQs available yet.")
-        
-    st.markdown("---")
-    q = st.text_input("Submit a question:")
-    
-    if st.button("Submit Question"):
-        if not q.strip():
-            st.error("Question cannot be empty.")
-        elif is_inappropriate(q):
-            st.error("Keep it constructive.")
-        elif not faq_df.empty and q in faq_df["Question"].values:
-            st.warning("This question has already been submitted.")
-        else:
-            new_q = pd.DataFrame([{"Question": q, "Answer": "Response pending"}])
-            faq_df = pd.concat([faq_df, new_q], ignore_index=True)
-            save_faq_data(faq_df)
-            st.success("Question submitted! It will appear here once reviewed.")
-            st.rerun()
-
-with tab_admin:
-    if st.checkbox("Show Admin Segment Controls"):
-        st.header("Admin Configuration & Submitter Tracking")
-        segment_df = get_segment_data()
-        
-        with st.form("segment_config_form"):
-            admin_names_list = get_existing_names()
-            
-            admin_col1, admin_col2 = st.columns(2)
-            with admin_col1:
-                selected_admin_existing = st.selectbox("Select Existing Admin Name", options=["-- Select --"] + admin_names_list)
-            with admin_col2:
-                typed_admin_new = st.text_input("Or Type New Admin Name", help="Type your name if you are a new admin.")
-            
-            new_url = st.text_input("Active Strava Segment URL", value=SEGMENT_URL)
-            
-            submitted = st.form_submit_button("Update Segment & Log Submitter")
-            
-            if submitted:
-                if typed_admin_new.strip():
-                    admin_name = typed_admin_new.strip()
-                elif selected_admin_existing != "-- Select --":
-                    admin_name = selected_admin_existing.strip()
-                else:
-                    admin_name = ""
-
-                if not admin_name:
-                    st.error("Please select an existing admin name or type a new name.")
-                elif not new_url.strip():
-                    st.error("Please enter a valid Segment URL.")
-                else:
-                    if save_segment_submission(admin_name, new_url):
-                        st.success(f"Segment updated and logged successfully by {admin_name}!")
-                        st.rerun()
-        
-        st.subheader("Segment Configuration History")
-        if not segment_df.empty:
-            st.dataframe(segment_df.sort_values(by="Date", ascending=False).head(10), use_container_width=True, hide_index=True)
-        else:
-            st.write("No segment history available.")
+                    summary = f"### 🏆 Monthly Challenge Summary\n**Period:** {datetime.now().strftime('%m/%Y')}\n**Current Average Delta:** {int(avg_delta)} seconds\n\n| Place | Name | Actual Time | Handicap | Adjusted Time |\n|
