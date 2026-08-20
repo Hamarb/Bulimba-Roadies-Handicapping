@@ -155,6 +155,16 @@ tab_inst, tab_entry, tab_seed, tab_res, tab_faq, tab_admin = st.tabs(
 
 with tab_inst:
     st.info("Disclaimer: This application is a casual social experiment. Participation is entirely voluntary, and no one involved in the creation, hosting, or management of this app is legally or financially accountable for any outcomes, incidents, or errors. All submitted data remains available in the public domain. If you are concerned about privacy please use a different name. Stay safe and have fun!")
+
+    st.markdown("""
+    **Instructions***
+    We have a love hate relationship with Strava. We all love the platform and how it presents ourr data. Unfortunately getting data out is more challenging. This is a compromise that will evolve with use.
+    1. Admin will set the "The active challenge segment".
+    2. Participants just ride the segment and then complete the data entry form. 
+    3. This app will calculate handicaps, seeding and the results.
+    4. The app will also format the weekly Facebook posts.
+    5. Please submit any questions via the FAQ. Complaints should be sent to the Mayor of Bulimba!
+    """)
     
     with st.expander("ℹ️ How is my handicap calculated?"):
         st.markdown("""
@@ -163,14 +173,14 @@ with tab_inst:
         
         Instead of rigid, hard-coded start times, every handicap is calculated through four simple steps:
         
-        1. **Delta Estimate (Community Powered)** To submit actual times for each challenge, everyone also provides a personal estimate of the Delta (the time gap in seconds between the fastest and slowest rider). We take the average of all submissions to create our official Group Estimated Delta.
+        1. **Delta Estimate (Community Powered):** To submit actual times for each challenge, everyone also provides a personal estimate of the Delta (the time gap in seconds between the fastest and slowest rider). We take the average of all submissions to create our official Group Estimated Delta.
            
-        2. **Seeding** Using your submitted FTP, participants are sorted from lowest to highest. Your FTP isn't the competition; it is used to allocate your handicap relative to all participants. However, the FTP that you submit will be visible to all participants.
+        2. **Seeding:** Using your submitted FTP, participants are sorted from lowest to highest. Your FTP isn't the competition; it is used to allocate your handicap relative to all participants. However, the FTP that you submit will be visible to all participants.
            
-        3. **Inclusive Handicap** Everyone receives a calculated handicap designed to level the playing field. The person with the highest FTP receives the maximum handicap penalty (the full Group Estimated Delta). Every other rider receives a scaled handicap based on their position in the field.  
+        3. **Inclusive Handicap:** Everyone receives a calculated handicap designed to level the playing field. The person with the highest FTP receives the maximum handicap penalty (the full Group Estimated Delta). Every other rider receives a scaled handicap based on their position in the field.  
            The person with the lowest FTP still receives a handicap (Group Estimated Delta divided by the total participant count), ensuring no one sits at zero and the exact same formula applies equally to all members.
            
-        4. **Results** Your official adjusted time is calculated by adding your calculated handicap to your actual segment time:
+        4. **Results:** Your official adjusted time is calculated by adding your calculated handicap to your actual segment time:
 
             *Adjusted Time = Actual Time + Handicap*
 
