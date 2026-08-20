@@ -179,8 +179,7 @@ with tab_inst:
 
 with tab_entry:
     st.header("Data Entry")
-    st.markdown(f"**Active Challenge Segment:** [{SEGMENT_URL}]({SEGMENT_URL})")
-    
+        
     existing_names = get_existing_names()
     
     with st.form("entry_form", clear_on_submit=True):
