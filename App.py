@@ -8,6 +8,36 @@ from google.oauth2.service_account import Credentials
 
 st.set_page_config(page_title="Welcome to the Bulimba Roadies Monthly Challenge", page_icon="🚴‍♂️", layout="wide")
 
+# --- CUSTOM CSS FOR ENHANCED TAB VISIBILITY ---
+st.markdown("""
+<style>
+    /* Style the tab labels */
+    .stTabs [data-baseweb="tab"] {
+        font-size: 1.1rem;
+        font-weight: 600;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        padding-left: 20px;
+        padding-right: 20px;
+        background-color: #f1f3f5;
+        border-radius: 4px 4px 0px 0px;
+        margin-right: 4px;
+    }
+    
+    /* Style the active tab */
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        background-color: #ff4b4b;
+        color: white !important;
+        font-weight: 700;
+    }
+    
+    /* Style tab text color inside active tab */
+    .stTabs [data-baseweb="tab"][aria-selected="true"] div p {
+        color: white !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # --- GOOGLE SHEETS SETUP VIA GSPREAD ---
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -286,7 +316,6 @@ with tab_entry:
                 else:
                     df = load_data()
                     if target_name in df["Name"].values:
-                        # Completely filters out ALL rows matching this rider across the sheet
                         df = df[df["Name"] != target_name]
                         save_data(df)
                         st.success(f"Successfully removed all records for {target_name}.")
