@@ -132,12 +132,12 @@ def format_time(sec):
 
 SEGMENT_URL = get_segment_url()
 
-# --- CUSTOM CENTERED HEADER WITH RIGHT-ALIGNED EMOJIS ON THE SECOND LINE ---
+# --- CUSTOM HEADER LAYOUT (Line 1: Emojis Left | Line 2: Emojis Right) ---
 st.markdown("""
 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-    <span style="font-size: 2.5rem; visibility: hidden;">🚴‍♀️ 🚴‍♂️</span>
-    <h1 style="margin: 0; text-align: center; flex-grow: 1;">Bulimba Roadies</h1>
     <span style="font-size: 2.5rem;">🚴‍♀️ 🚴‍♂️</span>
+    <h1 style="margin: 0; text-align: center; flex-grow: 1;">Bulimba Roadies</h1>
+    <span style="font-size: 2.5rem; visibility: hidden;">🚴‍♀️ 🚴‍♂️</span>
 </div>
 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 2px;">
     <span style="font-size: 2.5rem; visibility: hidden;">🚴‍♂️ 🚴‍♀️</span>
@@ -145,7 +145,9 @@ st.markdown("""
     <span style="font-size: 2.5rem;">🚴‍♂️ 🚴‍♀️</span>
 </div>
 """, unsafe_allow_html=True)
-st.markdown(f"<div style='text-align: center; margin-top: 10px;'><b>The active challenge segment is:</b> <a href='{SEGMENT_URL}'>{SEGMENT_URL}</a></div>", unsafe_allow_html=True)
+
+# Left-aligned active challenge segment text
+st.markdown(f"<div style='text-align: left; margin-top: 15px;'><b>The active challenge segment is:</b> <a href='{SEGMENT_URL}'>{SEGMENT_URL}</a></div>", unsafe_allow_html=True)
 
 # --- TABS ---
 tab_inst, tab_entry, tab_seed, tab_res, tab_faq, tab_admin = st.tabs(
@@ -275,10 +277,7 @@ with tab_seed:
             
             deduplicated_df = segment_filtered.drop_duplicates(subset=["Name"], keep="first")
             seed_df = deduplicated_df.sort_values(by="FTP (W)", ascending=True)[["Name", "FTP (W)", "Date"]]
-            
-            # Format date timestamp nicely for display
             seed_df["Date"] = seed_df["Date"].dt.strftime("%Y-%m-%d %H:%M:%S")
-            
             st.dataframe(seed_df, use_container_width=True, hide_index=True)
         else:
             st.info("No entries found for the currently active segment.")
@@ -315,98 +314,3 @@ with tab_res:
                     else:
                         h = 0.0
                     handicaps.append(round(h))
-                    
-                active["Handicap_Sec"] = handicaps
-                active["Adjusted_Sec"] = active["Segment Time (s)"] + active["Handicap_Sec"]
-                
-                active = active.sort_values(by="Adjusted_Sec").reset_index(drop=True)
-                active["Place"] = active.index + 1
-                
-                display = active.copy()
-                display["Actual Time"] = display["Segment Time (s)"].apply(format_time)
-                display["Handicap"] = display["Handicap_Sec"].apply(format_time)
-                display["Adjusted Time"] = display["Adjusted_Sec"].apply(format_time)
-                st.dataframe(display[["Place", "Name", "Actual Time", "Handicap", "Adjusted Time"]], use_container_width=True, hide_index=True)
-
-                if st.button("📋 Generate Facebook Summary"):
-                    summary = f"### 🏆 Monthly Challenge Summary\n**Period:** {datetime.now().strftime('%m/%Y')}\n**Current Average Delta:** {int(avg_delta)} seconds\n\n| Place | Name | Actual Time | Handicap | Adjusted Time |\n| :--- | :--- | :--- | :--- | :--- |\n"
-                    for _, row in display.iterrows():
-                        summary += f"| {row['Place']} | {row['Name']} | {row['Actual Time']} | {row['Handicap']} | {row['Adjusted Time']} |\n"
-                    summary += f"\nCheck out the active challenge segment details here: {SEGMENT_URL}"
-                    st.code(summary, language="markdown")
-            else:
-                st.info("No valid segment times or delta estimates found for this segment yet.")
-        else:
-            st.info("No challenge results recorded for the currently active segment.")
-    else:
-        st.info("No data available.")
-
-with tab_faq:
-    st.header("Frequently Asked Questions")
-    faq_df = load_faq_data()
-    
-    if not faq_df.empty:
-        for _, row in faq_df.iterrows():
-            if str(row["Question"]).strip():
-                with st.expander(str(row["Question"])): 
-                    st.write(str(row["Answer"]))
-    else:
-        st.info("No FAQs available yet.")
-        
-    st.markdown("---")
-    q = st.text_input("Submit a question:")
-    
-    if st.button("Submit Question"):
-        if not q.strip():
-            st.error("Question cannot be empty.")
-        elif is_inappropriate(q):
-            st.error("Keep it constructive.")
-        elif not faq_df.empty and q in faq_df["Question"].values:
-            st.warning("This question has already been submitted.")
-        else:
-            new_q = pd.DataFrame([{"Question": q, "Answer": "Response pending"}])
-            faq_df = pd.concat([faq_df, new_q], ignore_index=True)
-            save_faq_data(faq_df)
-            st.success("Question submitted! It will appear here once reviewed.")
-            st.rerun()
-
-with tab_admin:
-    if st.checkbox("Show Admin Segment Controls"):
-        st.header("Admin Configuration & Submitter Tracking")
-        segment_df = get_segment_data()
-        
-        with st.form("segment_config_form"):
-            admin_names_list = get_existing_names()
-            
-            admin_col1, admin_col2 = st.columns(2)
-            with admin_col1:
-                selected_admin_existing = st.selectbox("Select Existing Admin Name", options=["-- Select --"] + admin_names_list)
-            with admin_col2:
-                typed_admin_new = st.text_input("Or Type New Admin Name", help="Type your name if you are a new admin.")
-            
-            new_url = st.text_input("Active Strava Segment URL", value=SEGMENT_URL)
-            
-            submitted = st.form_submit_button("Update Segment & Log Submitter")
-            
-            if submitted:
-                if typed_admin_new.strip():
-                    admin_name = typed_admin_new.strip()
-                elif selected_admin_existing != "-- Select --":
-                    admin_name = selected_admin_existing.strip()
-                else:
-                    admin_name = ""
-
-                if not admin_name:
-                    st.error("Please select an existing admin name or type a new name.")
-                elif not new_url.strip():
-                    st.error("Please enter a valid Segment URL.")
-                else:
-                    if save_segment_submission(admin_name, new_url):
-                        st.success(f"Segment updated and logged successfully by {admin_name}!")
-                        st.rerun()
-        
-        st.subheader("Segment Configuration History")
-        if not segment_df.empty:
-            st.dataframe(segment_df.sort_values(by="Date", ascending=False).head(10), use_container_width=True, hide_index=True)
-        else:
-            st.write("No segment history available.")
