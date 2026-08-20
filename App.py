@@ -8,37 +8,47 @@ from google.oauth2.service_account import Credentials
 
 st.set_page_config(page_title="Welcome to the Bulimba Roadies Monthly Challenge", page_icon="🚴‍♂️", layout="wide")
 
-# --- CUSTOM CSS FOR HIGH-VISIBILITY, POPPING TABS ---
+# --- CUSTOM CSS FOR BOLD, HIGH-CONTRAST TABS ---
 st.markdown("""
 <style>
-    /* Style all tabs with a distinct card-like appearance */
-    .stTabs [data-baseweb="tab"] {
-        font-size: 1.15rem;
-        font-weight: 700;
-        padding: 12px 24px;
+    /* Target the overall tab container wrapper */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
         background-color: #e9ecef;
-        color: #495057;
-        border: 2px solid #dee2e6;
-        border-radius: 8px 8px 0px 0px;
-        margin-right: 6px;
-        transition: all 0.2s ease-in-out;
+        padding: 8px;
+        border-radius: 12px;
     }
-    
-    /* Hover effect for inactive tabs */
+
+    /* Style for individual inactive tabs */
+    .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        background-color: #ffffff;
+        border-radius: 8px;
+        color: #212529 !important;
+        font-size: 1.1rem;
+        font-weight: 700;
+        padding: 0px 24px;
+        border: 2px solid #ced4da;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        transition: all 0.2s ease;
+    }
+
+    /* Hover effect */
     .stTabs [data-baseweb="tab"]:hover {
-        background-color: #dee2e6;
-        color: #212529;
+        background-color: #f8f9fa;
+        border-color: #adb5bd;
+        color: #000000 !important;
     }
-    
-    /* Style the active selected tab so it pops dramatically */
+
+    /* Style for the active selected tab (High Visibility Pop) */
     .stTabs [data-baseweb="tab"][aria-selected="true"] {
-        background-color: #ff4b4b !important;
+        background: linear-gradient(135deg, #ff4b4b 0%, #d90429 100%) !important;
         color: white !important;
-        border-color: #e63946 !important;
-        box-shadow: 0px -4px 10px rgba(255, 75, 75, 0.3);
+        border: 2px solid #b7091c !important;
+        box-shadow: 0 4px 12px rgba(217, 4, 41, 0.4) !important;
     }
-    
-    /* Ensure inner text in active tab inherits white color */
+
+    /* Force text inside the active tab to be crisp white */
     .stTabs [data-baseweb="tab"][aria-selected="true"] div p {
         color: white !important;
     }
@@ -344,141 +354,4 @@ with tab_seed:
         if not segment_filtered.empty:
             if "Date" in segment_filtered.columns:
                 parsed_dates = pd.to_datetime(segment_filtered["Date"], errors="coerce")
-                segment_filtered["Sort_Date"] = parsed_dates.fillna(pd.Timestamp.min)
-                segment_filtered = segment_filtered.sort_values(by="Sort_Date", ascending=False)
-                segment_filtered["Date"] = parsed_dates.dt.strftime("%Y-%m-%d %H:%M:%S").fillna(segment_filtered["Date"].astype(str))
-            
-            deduplicated_df = segment_filtered.drop_duplicates(subset=["Name"], keep="first")
-            seed_df = deduplicated_df.sort_values(by="FTP (W)", ascending=True)[["Name", "FTP (W)", "Date"]]
-            st.dataframe(seed_df, use_container_width=True, hide_index=True)
-        else:
-            st.info("No entries found for the currently active segment.")
-    else:
-        st.info("No data available.")
-
-with tab_res:
-    st.header("Challenge Results")
-    df = load_data()
-    
-    if not df.empty and "Segment" in df.columns:
-        segment_filtered = df[df["Segment"] == SEGMENT_URL].copy()
-        
-        if not segment_filtered.empty:
-            if "Date" in segment_filtered.columns:
-                parsed_dates = pd.to_datetime(segment_filtered["Date"], errors="coerce")
-                segment_filtered["Sort_Date"] = parsed_dates.fillna(pd.Timestamp.min)
-                segment_filtered = segment_filtered.sort_values(by="Sort_Date", ascending=False)
-            
-            deduplicated_df = segment_filtered.drop_duplicates(subset=["Name"], keep="first")
-            active = deduplicated_df[(deduplicated_df["Segment Time (s)"] > 0) & (deduplicated_df["Delta_Estimate"] > 0)].copy()
-            
-            if not active.empty:
-                avg_delta = active["Delta_Estimate"].mean()
-                st.markdown(f"**Current average delta for this segment:** {int(avg_delta)} seconds.")
-                
-                active = active.sort_values(by=["FTP (W)", "Segment Time (s)"], ascending=[True, False]).reset_index(drop=True)
-                count = len(active)
-                
-                base_slice = avg_delta / count
-                handicaps = []
-                for i in range(count):
-                    if count > 1:
-                        h = base_slice + (avg_delta - base_slice) * (i / (count - 1))
-                    else:
-                        h = 0.0
-                    handicaps.append(round(h))
-                    
-                active["Handicap_Sec"] = handicaps
-                active["Adjusted_Sec"] = active["Segment Time (s)"] + active["Handicap_Sec"]
-                
-                active = active.sort_values(by="Adjusted_Sec").reset_index(drop=True)
-                active["Place"] = active.index + 1
-                
-                display = active.copy()
-                display["Actual Time"] = display["Segment Time (s)"].apply(format_time)
-                display["Handicap"] = display["Handicap_Sec"].apply(format_time)
-                display["Adjusted Time"] = display["Adjusted_Sec"].apply(format_time)
-                st.dataframe(display[["Place", "Name", "Actual Time", "Handicap", "Adjusted Time"]], use_container_width=True, hide_index=True)
-
-                if st.button("📋 Generate Facebook Summary"):
-                    summary = f"### 🏆 Monthly Challenge Summary\n**Period:** {datetime.now().strftime('%m/%Y')}\n**Current Average Delta:** {int(avg_delta)} seconds\n\n| Place | Name | Actual Time | Handicap | Adjusted Time |\n| :--- | :--- | :--- | :--- | :--- |\n"
-                    for _, row in display.iterrows():
-                        summary += f"| {row['Place']} | {row['Name']} | {row['Actual Time']} | {row['Handicap']} | {row['Adjusted Time']} |\n"
-                    summary += f"\nCheck out the active challenge segment details here: {SEGMENT_URL}"
-                    st.code(summary, language="markdown")
-            else:
-                st.info("No valid segment times or delta estimates found for this segment yet.")
-        else:
-            st.info("No challenge results recorded for the currently active segment.")
-    else:
-        st.info("No data available.")
-
-with tab_faq:
-    st.header("Frequently Asked Questions")
-    faq_df = load_faq_data()
-    
-    if not faq_df.empty:
-        for _, row in faq_df.iterrows():
-            if str(row["Question"]).strip():
-                with st.expander(str(row["Question"])): 
-                    st.write(str(row["Answer"]))
-    else:
-        st.info("No FAQs available yet.")
-        
-    st.markdown("---")
-    q = st.text_input("Submit a question:")
-    
-    if st.button("Submit Question"):
-        if not q.strip():
-            st.error("Question cannot be empty.")
-        elif is_inappropriate(q):
-            st.error("Keep it constructive.")
-        elif not faq_df.empty and q in faq_df["Question"].values:
-            st.warning("This question has already been submitted.")
-        else:
-            new_q = pd.DataFrame([{"Question": q, "Answer": "Response pending"}])
-            faq_df = pd.concat([faq_df, new_q], ignore_index=True)
-            save_faq_data(faq_df)
-            st.success("Question submitted! It will appear here once reviewed.")
-            st.rerun()
-
-with tab_admin:
-    if st.checkbox("Show Admin Segment Controls"):
-        st.header("Admin Configuration & Submitter Tracking")
-        segment_df = get_segment_data()
-        
-        with st.form("segment_config_form"):
-            admin_names_list = get_existing_names()
-            
-            admin_col1, admin_col2 = st.columns(2)
-            with admin_col1:
-                selected_admin_existing = st.selectbox("Select Existing Admin Name", options=["-- Select --"] + admin_names_list)
-            with admin_col2:
-                typed_admin_new = st.text_input("Or Type New Admin Name", help="Type your name if you are a new admin.")
-            
-            new_url = st.text_input("Active Strava Segment URL", value=SEGMENT_URL)
-            
-            submitted = st.form_submit_button("Update Segment & Log Submitter")
-            
-            if submitted:
-                if typed_admin_new.strip():
-                    admin_name = typed_admin_new.strip()
-                elif selected_admin_existing != "-- Select --":
-                    admin_name = selected_admin_existing.strip()
-                else:
-                    admin_name = ""
-
-                if not admin_name:
-                    st.error("Please select an existing admin name or type a new name.")
-                elif not new_url.strip():
-                    st.error("Please enter a valid Segment URL.")
-                else:
-                    if save_segment_submission(admin_name, new_url):
-                        st.success(f"Segment updated and logged successfully by {admin_name}!")
-                        st.rerun()
-        
-        st.subheader("Segment Configuration History")
-        if not segment_df.empty:
-            st.dataframe(segment_df.sort_values(by="Date", ascending=False).head(10), use_container_width=True, hide_index=True)
-        else:
-            st.write("No segment history available.")
+                segment_filtered["Sort_Date"] = parsed
