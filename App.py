@@ -8,44 +8,55 @@ from google.oauth2.service_account import Credentials
 
 st.set_page_config(page_title="Welcome to the Bulimba Roadies Monthly Challenge", page_icon="🚴‍♂️", layout="wide")
 
-# --- HIGH-VISIBILITY POPPING TAB CSS ---
+# --- CUSTOM CSS FOR PROMINENT NAVIGATION PILLS ---
 st.markdown("""
 <style>
-    /* Force tab list container to stand out */
-    div.stTabs [data-baseweb="tab-list"] {
-        gap: 12px;
-        background-color: #dee2e6;
-        padding: 10px;
-        border-radius: 10px;
+    /* Turn the horizontal radio group into high-visibility navigation pills */
+    div.row-widget.stRadio > div {
+        background-color: #f1f3f5;
+        padding: 8px;
+        border-radius: 12px;
+        border: 2px solid #ced4da;
+        display: flex;
+        justify-content: center;
+        gap: 10px;
     }
-
-    /* Inactive tabs styling */
-    div.stTabs [data-baseweb="tab"] {
+    
+    /* Hide the default radio circles */
+    div.row-widget.stRadio input[type="radio"] {
+        display: none;
+    }
+    
+    /* Style the radio labels to look like buttons/tabs */
+    div.row-widget.stRadio label {
         background-color: #ffffff !important;
-        border: 2px solid #adb5bd !important;
-        border-radius: 6px !important;
         color: #212529 !important;
         padding: 10px 20px !important;
+        border-radius: 8px !important;
+        border: 2px solid #adb5bd !important;
         font-weight: 700 !important;
+        font-size: 1.05rem !important;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        transition: all 0.2s ease;
     }
-
-    /* Hover style */
-    div.stTabs [data-baseweb="tab"]:hover {
-        background-color: #f1f3f5 !important;
+    
+    /* Hover state */
+    div.row-widget.stRadio label:hover {
+        background-color: #e9ecef !important;
         border-color: #6c757d !important;
     }
 
-    /* Active selected tab - Extreme High Pop */
-    div.stTabs [data-baseweb="tab"][aria-selected="true"] {
-        background-color: #ff4b4b !important;
-        border: 2px solid #b7091c !important;
-        color: #ffffff !important;
-        box-shadow: 0 4px 12px rgba(255, 75, 75, 0.5);
+    /* Active selected pill - High Pop Styling */
+    div.row-widget.stRadio input[type="radio"]:checked + div {
+        background-color: transparent !important;
     }
-
-    /* Force text inside active tab to be pure white */
-    div.stTabs [data-baseweb="tab"][aria-selected="true"] p {
+    
+    div.row-widget.stRadio label:has(input[type="radio"]:checked) {
+        background: linear-gradient(135deg, #ff4b4b 0%, #d90429 100%) !important;
         color: #ffffff !important;
+        border: 2px solid #b7091c !important;
+        box-shadow: 0 4px 12px rgba(255, 75, 75, 0.4) !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -190,12 +201,19 @@ st.markdown("""
 
 st.markdown(f"<div style='text-align: left; margin-top: 15px;'><b>The active challenge segment is:</b> <a href='{SEGMENT_URL}'>{SEGMENT_URL}</a></div>", unsafe_allow_html=True)
 
-# --- TABS ---
-tab_inst, tab_entry, tab_seed, tab_res, tab_faq, tab_admin = st.tabs(
-    ["Instructions", "Data Entry", "Seeding", "Results", "FAQ", "Admin"]
+st.markdown("---")
+
+# --- NAVIGATION PILLS (Replacing standard tabs for guaranteed visual impact) ---
+selected_tab = st.radio(
+    "Navigation", 
+    ["Instructions", "Data Entry", "Seeding", "Results", "FAQ", "Admin"], 
+    horizontal=True, 
+    label_visibility="collapsed"
 )
 
-with tab_inst:
+st.markdown("---")
+
+if selected_tab == "Instructions":
     st.info("Disclaimer: This application is a casual social experiment. Participation is entirely voluntary, and no one involved in the creation, hosting, or management of this app is legally or financially accountable for any outcomes, incidents, or errors. All submitted data remains available in the public domain. If you are concerned about privacy please use a different name. Stay safe and have fun!")
     
     with st.expander("ℹ️ How is my handicap calculated?"):
@@ -230,7 +248,7 @@ with tab_inst:
         | **Fairness** | Rigid and prone to outdated metrics | Self-correcting and community-driven |
         """)
 
-with tab_entry:
+elif selected_tab == "Data Entry":
     st.header("Data Entry")
         
     df_all = load_data()
@@ -335,7 +353,7 @@ with tab_entry:
                     else:
                         st.warning(f"No entry found for '{target_name}'.")
 
-with tab_seed:
+elif selected_tab == "Seeding":
     header_col1, header_col2 = st.columns([3, 1])
     with header_col1:
         st.header("Seeding Order")
@@ -361,7 +379,7 @@ with tab_seed:
     else:
         st.info("No data available.")
 
-with tab_res:
+elif selected_tab == "Results":
     st.header("Challenge Results")
     df = load_data()
     
@@ -418,7 +436,7 @@ with tab_res:
     else:
         st.info("No data available.")
 
-with tab_faq:
+elif selected_tab == "FAQ":
     st.header("Frequently Asked Questions")
     faq_df = load_faq_data()
     
@@ -447,7 +465,7 @@ with tab_faq:
             st.success("Question submitted! It will appear here once reviewed.")
             st.rerun()
 
-with tab_admin:
+elif selected_tab == "Admin":
     if st.checkbox("Show Admin Segment Controls"):
         st.header("Admin Configuration & Submitter Tracking")
         segment_df = get_segment_data()
