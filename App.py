@@ -276,9 +276,9 @@ with tab_entry:
         with st.form("delete_form"):
             existing_names_for_del = get_existing_names()
             target_name = st.selectbox("Select your name to delete", options=["-- Select --"] + existing_names_for_del)
-            confirm_delete = st.checkbox("I confirm I want to permanently remove my entry.")
+            confirm_delete = st.checkbox("I confirm I want to permanently remove all my records.")
             
-            if st.form_submit_button("Delete My Record"):
+            if st.form_submit_button("Delete All My Records"):
                 if target_name == "-- Select --":
                     st.error("Please select your name.")
                 elif not confirm_delete:
@@ -286,9 +286,10 @@ with tab_entry:
                 else:
                     df = load_data()
                     if target_name in df["Name"].values:
+                        # Completely filters out ALL rows matching this rider across the sheet
                         df = df[df["Name"] != target_name]
                         save_data(df)
-                        st.success(f"Successfully deleted records for {target_name}.")
+                        st.success(f"Successfully removed all records for {target_name}.")
                         st.rerun()
                     else:
                         st.warning(f"No entry found for '{target_name}'.")
@@ -306,12 +307,9 @@ with tab_seed:
         
         if not segment_filtered.empty:
             if "Date" in segment_filtered.columns:
-                # Robust date parsing: handles standard format or falls back safely to string representation
                 parsed_dates = pd.to_datetime(segment_filtered["Date"], errors="coerce")
                 segment_filtered["Sort_Date"] = parsed_dates.fillna(pd.Timestamp.min)
                 segment_filtered = segment_filtered.sort_values(by="Sort_Date", ascending=False)
-                
-                # Format valid datetimes, leave any raw fallback strings intact
                 segment_filtered["Date"] = parsed_dates.dt.strftime("%Y-%m-%d %H:%M:%S").fillna(segment_filtered["Date"].astype(str))
             
             deduplicated_df = segment_filtered.drop_duplicates(subset=["Name"], keep="first")
