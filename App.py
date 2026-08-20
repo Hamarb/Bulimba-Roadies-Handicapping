@@ -184,34 +184,30 @@ with tab_entry:
     with st.form("entry_form", clear_on_submit=True):
         st.markdown("### Rider Details")
         
-        # Clean mode selector to choose between picking an existing name or typing a new one
-        name_mode = st.radio("Are you an existing rider?", options=["Select Existing Name", "Type a New Name"])
+        # Use radio options, and display the text box cleanly right below it
+        name_mode = st.radio("Choose Entry Mode", options=["Select Existing Rider", "Type New Rider"])
         
-        if name_mode == "Select Existing Name":
+        clean_name = ""
+        if name_mode == "Select Existing Rider":
             if existing_names:
                 selected_name = st.selectbox("Choose your name", options=["-- Select --"] + existing_names)
+                if selected_name != "-- Select --":
+                    clean_name = selected_name
             else:
-                st.warning("No existing riders found yet. Please switch to 'Type a New Name'.")
-                selected_name = "-- Select --"
-            typed_name = ""
+                st.info("No existing riders found. Please choose 'Type New Rider'.")
         else:
             typed_name = st.text_input("Enter your First and Last Name")
-            selected_name = "-- Select --"
+            if typed_name:
+                clean_name = typed_name
         
         ftp = st.number_input("Current FTP (Watts)", 0, 500, 100, help="Sustained 20-minute power output.")
         time = st.number_input("Your actual completion time for the segment (in seconds).", 60, 3600, 400)
         delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place.", 10, 1200, 300)
         
         if st.form_submit_button("Submit Entry"):
-            # Determine the clean name based on which mode was active
-            if name_mode == "Select Existing Name" and selected_name != "-- Select --":
-                clean_name = selected_name.strip()
-            elif name_mode == "Type a New Name" and typed_name.strip():
-                clean_name = typed_name.strip()
-            else:
-                clean_name = ""
-                
-            if not clean_name: 
+            final_name_to_save = clean_name.strip()
+            
+            if not final_name_to_save: 
                 st.error("Please provide or select a valid Name!")
             else:
                 df = load_data()
@@ -219,7 +215,7 @@ with tab_entry:
                 today_str = datetime.now(brisbane_tz).strftime("%Y-%m-%d")
                 
                 new_entry = pd.DataFrame([{
-                    "Name": clean_name, 
+                    "Name": final_name_to_save, 
                     "FTP (W)": ftp, 
                     "Segment Time (s)": time, 
                     "Delta_Estimate": delta_est, 
@@ -227,10 +223,10 @@ with tab_entry:
                     "Date": today_str
                 }])
                 
-                df = pd.concat([df[df["Name"] != clean_name], new_entry], ignore_index=True)
+                df = pd.concat([df[df["Name"] != final_name_to_save], new_entry], ignore_index=True)
                 save_data(df)
                 
-                st.success(f"Entry saved for {clean_name}!")
+                st.success(f"Entry saved for {final_name_to_save}!")
                 st.rerun()
 
     st.markdown("---")
