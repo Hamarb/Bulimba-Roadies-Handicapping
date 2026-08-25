@@ -1,4 +1,4 @@
-name: Update Handicap Data
+name: Strava Download
 
 on:
   schedule:
