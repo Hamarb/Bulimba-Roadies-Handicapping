@@ -185,7 +185,14 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-st.markdown(f"<div style='text-align: left; margin-top: 25px; margin-bottom: 20px; font-size: 0.9rem;'>The active challenge segment is: <a href='{SEGMENT_URL}'>{SEGMENT_URL}</a></div>", unsafe_allow_html=True)
+segment_name = get_strava_segment_info(active_url)
+
+st.markdown(
+    f"<div style='text-align: left; margin-top: 25px; margin-bottom: 20px; font-size: 0.9rem;'>"
+    f"The active challenge segment is: <a href='{segment_url}' target='_blank'>{segment_name}</a>"
+    f"</div>", 
+    unsafe_allow_html=True
+)
 
 # --- TABS ---
 tab_inst, tab_entry, tab_seed, tab_res, tab_faq, tab_admin = st.tabs(
