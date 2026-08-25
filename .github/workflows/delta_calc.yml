@@ -1,0 +1,34 @@
+name: Automated Segment & Delta Processing
+
+on:
+  schedule:
+    - cron: '0 0 * * 1' # Runs every Monday, for example
+  workflow_dispatch:
+
+jobs:
+  run-ml-model:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install pandas requests gspread google-auth scikit-learn
+
+      - name: Run Prediction Script
+        env:
+          GCP_TYPE: ${{ secrets.GCP_TYPE }}
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          GCP_PRIVATE_KEY_ID: ${{ secrets.GCP_PRIVATE_KEY_ID }}
+          GCP_PRIVATE_KEY: ${{ secrets.GCP_PRIVATE_KEY }}
+          GCP_CLIENT_EMAIL: ${{ secrets.GCP_CLIENT_EMAIL }}
+          GCP_CLIENT_ID_GCP: ${{ secrets.GCP_CLIENT_ID_GCP }}
+          GCP_CERT_URL: ${{ secrets.GCP_CERT_URL }}
+          GSHEETS_SPREADSHEET_URL: ${{ secrets.GSHEETS_SPREADSHEET_URL }}
+        run: python predict_delta.py
