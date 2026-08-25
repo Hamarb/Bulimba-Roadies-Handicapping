@@ -61,19 +61,34 @@ def save_data(df):
         st.error(f"Failed to save data: {e}")
 
 def get_segment_data():
-    """Fetches segment configuration history from the 'Segment' worksheet."""
+    """Fetches segment configuration history from the 'Segment' worksheet using raw values."""
     expected_columns = ["Name", "Segment URL", "Date"]
     try:
         sheet = init_connection().worksheet("Segment")
-        data = sheet.get_all_records()
-        df = pd.DataFrame(data)
-        if df.empty:
+        rows = sheet.get_all_values()
+        
+        # If there's only a header row or nothing at all
+        if not rows or len(rows) <= 1:
             return pd.DataFrame(columns=expected_columns)
+            
+        # First row is headers, remaining rows are data
+        header = rows[0]
+        data = rows[1:]
+        df = pd.DataFrame(data, columns=header)
+        
+        # Ensure all expected columns exist
         for col in expected_columns:
             if col not in df.columns:
                 df[col] = ""
+                
+        # Filter out completely blank rows
+        df = df.dropna(how="all")
+        if df.empty:
+            return pd.DataFrame(columns=expected_columns)
+            
         return df
-    except Exception:
+    except Exception as e:
+        st.error(f"Error loading segment history: {e}")
         return pd.DataFrame(columns=expected_columns)
 
 def save_segment_submission(admin_name, url):
