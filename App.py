@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 import gspread
 from google.oauth2.service_account import Credentials
+import time as t  # Aliased explicitly to avoid naming collisions
 
 st.set_page_config(page_title="Welcome to the Bulimba Roadies Monthly Challenge", page_icon="🚴‍♂️", layout="wide")
 
@@ -85,8 +86,8 @@ def save_segment_submission(admin_name, url):
         sheet.append_row([admin_name, url, now_brisbane])
         
         # Give Google Sheets a brief moment to commit the append operation 
-        # before the app re-queries the sheet history on rerun.
-        time.sleep(1)
+        # using the aliased time module to prevent collision.
+        t.sleep(1)
         return True
     except Exception as e:
         st.error(f"Failed to save segment submission: {e}")
@@ -254,7 +255,7 @@ with tab_entry:
 
     with st.form("entry_form"):
         ftp = st.number_input("Current FTP (Watts)", 0, 500, value=st.session_state.form_ftp, help="Sustained 20-minute power output.")
-        time = st.number_input("Your actual completion time for the segment (in seconds).", 60, 3600, value=st.session_state.form_time)
+        time_input = st.number_input("Your actual completion time for the segment (in seconds).", 60, 3600, value=st.session_state.form_time)
         delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place.", 10, 1200, value=st.session_state.form_delta)
         
         submitted = st.form_submit_button("Submit Entry")
@@ -269,14 +270,14 @@ with tab_entry:
                 new_entry = pd.DataFrame([{
                     "Name": active_name, 
                     "FTP (W)": ftp, 
-                    "Segment Time (s)": time, 
+                    "Segment Time (s)": time_input, 
                     "Delta_Estimate": delta_est, 
                     "Segment": SEGMENT_URL,
                     "Date": now_brisbane
                 }])
                 
                 df_all = load_data()
-                df_all = pd.concat([df_all[df_all["Name"] != active_name], new_entry], ignore_index=True)
+                df_all = pd.concat([df_all[~((df_all["Name"] == active_name) & (df_all["Segment"] == SEGMENT_URL))], new_entry], ignore_index=True)
                 save_data(df_all)
                 
                 st.session_state.loaded_from_history = False
@@ -448,11 +449,9 @@ with tab_admin:
                 else:
                     if save_segment_submission(admin_name, new_url):
                         st.success(f"Segment updated and logged successfully by {admin_name}!")
-                        import time as t
-                        t.sleep(1) # Give Google Sheets a second to register the append
                         st.rerun()
         
-        # Fetch segment data here so it re-queries AFTER any potential updates/reruns
+        # Load segment data here so it re-queries fresh data AFTER any app reruns
         segment_df = get_segment_data()
         
         st.subheader("Segment Configuration History")
