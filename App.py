@@ -432,12 +432,11 @@ with tab_admin:
             submitted = st.form_submit_button("Update Segment & Log Submitter")
             
             if submitted:
-                if typed_admin_new.strip():
-                    admin_name = typed_admin_new.strip()
-                elif selected_admin_existing != "-- Select --":
-                    admin_name = selected_admin_existing.strip()
-                else:
-                    admin_name = ""
+                # Safely evaluate inputs with explicit cleaning
+                cleaned_typed = typed_admin_new.strip() if typed_admin_new else ""
+                cleaned_selected = selected_admin_existing.strip() if selected_admin_existing and selected_admin_existing != "-- Select --" else ""
+                
+                admin_name = cleaned_typed if cleaned_typed else cleaned_selected
 
                 if not admin_name:
                     st.error("Please select an existing admin name or type a new name.")
