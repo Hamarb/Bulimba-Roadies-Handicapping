@@ -137,6 +137,8 @@ def pull_and_push_strava_data():
         
         for effort in efforts:
             seg = effort.get('segment', {})
+            # ADD THIS PRINT LINE TO DEBUG:
+            print(f"DEBUG: Found activity by {athlete_name} with segment '{seg.get('name')}' (ID: {seg.get('id')})")
             if seg.get('id') == target_segment_id:
                 elapsed_time = effort.get('elapsed_time', 0) # Exact segment time in seconds
                 start_date = effort.get('start_date_local', act.get('start_date', ''))
