@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
+import requests
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 import gspread
@@ -92,6 +93,22 @@ def get_segment_data():
     except Exception as e:
         st.error(f"Error loading segment history: {e}")
         return pd.DataFrame(columns=expected_columns)
+
+@st.cache_data(ttl=600)
+app_token = os.getenv("STRAVA_ACCESS_TOKEN") # Or use your existing token generator function
+
+def get_strava_segment_info(segment_url):
+    """Fetches the segment name from the Strava API using its URL."""
+    try:
+        segment_id = segment_url.strip("/").split("/")[-1]
+        headers = {'Authorization': f'Bearer {get_strava_access_token()}'}
+        response = requests.get(f"https://www.strava.com/api/v3/segments/{segment_id}", headers=headers)
+        
+        if response.status_code == 200:
+            return response.json().get('name', "Active Segment")
+    except Exception:
+        pass
+    return "Active Segment"
 
 def save_segment_submission(admin_name, url):
     """Appends submitter name, segment URL, and timestamp to the 'Segment' worksheet."""
