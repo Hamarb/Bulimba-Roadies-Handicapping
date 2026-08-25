@@ -12,9 +12,14 @@ def process_club_handicaps():
     # 2. Basic cleaning
     df = df.sort_values('Segment Time (s)').drop_duplicates('Name').reset_index(drop=True)
     
+    # --- SAFETY CHECK: Prevent Division by Zero ---
+    count = len(df)
+    if count == 0:
+        print("No participants found to calculate handicaps. Exiting safely.")
+        return
+
     # 3. Calculate dynamic handicap using the COMMUNITY ESTIMATE
     group_delta = df['Delta_Estimate'].mean()
-    count = len(df)
     
     # Calculate the base slice for the slowest rider
     base_slice = group_delta / count
