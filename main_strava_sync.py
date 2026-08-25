@@ -130,7 +130,11 @@ def pull_and_push_strava_data():
             
         activity_detail = detail_response.json()
         efforts = activity_detail.get('segment_efforts', [])
-        
+        # DEBUG: Print what segments this activity actually hit
+        for effort in efforts:
+            seg = effort.get('segment', {})
+            print(f"Ride by {athlete_name} hit segment: {seg.get('name')} (ID: {seg.get('id')})")
+            
         # Look for an effort that matches our target segment ID
         for effort in efforts:
             seg = effort.get('segment', {})
