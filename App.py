@@ -63,34 +63,31 @@ def save_data(df):
         st.error(f"Failed to save data: {e}")
 
 def get_segment_data():
-    """Fetches segment configuration history from the 'Segment' worksheet using raw values."""
+    """Fetches segment configuration history from the 'Segment' worksheet."""
     expected_columns = ["Name", "Segment Name", "Segment URL", "Date"]
     try:
         sheet = init_connection().worksheet("Segment")
         rows = sheet.get_all_values()
-        
         if not rows or len(rows) <= 1:
             return pd.DataFrame(columns=expected_columns)
             
         header = rows[0]
         data = rows[1:]
         df = pd.DataFrame(data, columns=header)
-        
         for col in expected_columns:
             if col not in df.columns:
                 df[col] = ""
-                
         df = df.dropna(how="all")
-        if df.empty:
-            return pd.DataFrame(columns=expected_columns)
-            
-        return df
+        return df if not df.empty else pd.DataFrame(columns=expected_columns)
     except Exception as e:
         st.error(f"Error loading segment history: {e}")
         return pd.DataFrame(columns=expected_columns)
 
-# Safely grab the Strava access token via environment variable
-app_token = os.getenv("STRAVA_ACCESS_TOKEN")
+# Safely grab the Strava access token via Streamlit Secrets or environment variables
+try:
+    app_token = st.secrets.get("STRAVA_ACCESS_TOKEN", os.getenv("STRAVA_ACCESS_TOKEN"))
+except Exception:
+    app_token = os.getenv("STRAVA_ACCESS_TOKEN")
 
 def get_strava_segment_info(segment_url):
     """Fetches the segment name from the Strava API using its URL."""
@@ -111,18 +108,15 @@ def save_segment_submission(admin_name, url):
         brisbane_tz = ZoneInfo("Australia/Brisbane")
         now_brisbane = datetime.now(brisbane_tz).strftime("%Y-%m-%d %H:%M:%S")
         
-        # Fetch the dynamic name from Strava before saving
         seg_name = get_strava_segment_info(url)
         
         sheet = init_connection().worksheet("Segment")
         sheet.append_row([admin_name, seg_name, url, now_brisbane])
-        
-        t.sleep(1)
         return True
     except Exception as e:
         st.error(f"Failed to save segment submission: {e}")
         return False
-        
+
 def get_segment_url():
     """Retrieves the latest active segment URL from the Google Sheet."""
     segment_df = get_segment_data()
@@ -166,6 +160,7 @@ def format_time(sec):
     return f"0:{m:02d}:{s:02d}"
 
 SEGMENT_URL = get_segment_url()
+segment_name = get_strava_segment_info(SEGMENT_URL)
 
 # --- CUSTOM HEADER LAYOUT ---
 st.markdown("""
@@ -181,8 +176,6 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-segment_name = get_strava_segment_info(SEGMENT_URL)
-
 st.markdown(
     f"<div style='text-align: left; margin-top: 25px; margin-bottom: 20px; font-size: 0.9rem;'>"
     f"The active challenge segment is: <a href='{SEGMENT_URL}' target='_blank'>{segment_name}</a>"
@@ -197,16 +190,6 @@ tab_inst, tab_entry, tab_seed, tab_res, tab_faq, tab_admin = st.tabs(
 
 with tab_inst:
     st.info("Disclaimer: This application is a casual social experiment. Participation is entirely voluntary, and no one involved in the creation, hosting, or management of this app is legally or financially accountable for any outcomes, incidents, or errors. All submitted data remains available in the public domain. If you are concerned about privacy please use a different name. Stay safe and have fun!")
-
-    st.markdown("""
-    We have a love hate relationship with Strava. We all love the platform and how it presents our data. Unfortunately getting data out is more challenging. This app should minimise the effort for all parties.    
-    
-    1. Admin will set the "The active challenge segment".
-    2. Participants just ride the segment and then complete the data entry form. 
-    3. This app will calculate handicaps, seeding and the results.
-    4. The app will also format the weekly Facebook posts.
-    5. Please submit any questions via the FAQ. Complaints should be sent to the Mayor of Bulimba!
-    """)
     
     with st.expander("ℹ️ How is my handicap calculated?"):
         st.markdown("""
@@ -241,6 +224,8 @@ with tab_inst:
         """)
 
 with tab_entry:
+    st.header("Data Entry")
+        
     df_all = load_data()
     existing_names = get_existing_names()
     
@@ -292,7 +277,7 @@ with tab_entry:
 
     with st.form("entry_form"):
         ftp = st.number_input("Current FTP (Watts)", 0, 500, value=st.session_state.form_ftp, help="Sustained 20-minute power output.")
-        time_input = st.number_input("Your actual completion time for the segment (in seconds).", 60, 3600, value=st.session_state.form_time)
+        time = st.number_input("Your actual completion time for the segment (in seconds).", 60, 3600, value=st.session_state.form_time)
         delta_est = st.number_input("Your Estimated Delta (in seconds) between first and last place.", 10, 1200, value=st.session_state.form_delta)
         
         submitted = st.form_submit_button("Submit Entry")
@@ -307,14 +292,17 @@ with tab_entry:
                 new_entry = pd.DataFrame([{
                     "Name": active_name, 
                     "FTP (W)": ftp, 
-                    "Segment Time (s)": time_input, 
+                    "Segment Time (s)": time, 
                     "Delta_Estimate": delta_est, 
                     "Segment": SEGMENT_URL,
                     "Date": now_brisbane
                 }])
                 
                 df_all = load_data()
-                df_all = pd.concat([df_all[~((df_all["Name"] == active_name) & (df_all["Segment"] == SEGMENT_URL))], new_entry], ignore_index=True)
+                # Safely preserve past segments while allowing updates for the current segment
+                df_all = df_all[~((df_all["Name"] == active_name) & (df_all["Segment"] == SEGMENT_URL))]
+                df_all = pd.concat([df_all, new_entry], ignore_index=True)
+                
                 save_data(df_all)
                 
                 st.session_state.loaded_from_history = False
@@ -458,6 +446,7 @@ with tab_faq:
 with tab_admin:
     if st.checkbox("Show Admin Segment Controls"):
         st.header("Admin Configuration & Submitter Tracking")
+        segment_df = get_segment_data()
         
         with st.form("segment_config_form"):
             admin_names_list = get_existing_names()
@@ -473,10 +462,12 @@ with tab_admin:
             submitted = st.form_submit_button("Update Segment & Log Submitter")
             
             if submitted:
-                cleaned_typed = typed_admin_new.strip() if typed_admin_new else ""
-                cleaned_selected = selected_admin_existing.strip() if selected_admin_existing and selected_admin_existing != "-- Select --" else ""
-                
-                admin_name = cleaned_typed if cleaned_typed else cleaned_selected
+                if typed_admin_new.strip():
+                    admin_name = typed_admin_new.strip()
+                elif selected_admin_existing != "-- Select --":
+                    admin_name = selected_admin_existing.strip()
+                else:
+                    admin_name = ""
 
                 if not admin_name:
                     st.error("Please select an existing admin name or type a new name.")
@@ -487,11 +478,8 @@ with tab_admin:
                         st.success(f"Segment updated and logged successfully by {admin_name}!")
                         st.rerun()
         
-        segment_df = get_segment_data()
-        
         st.subheader("Segment Configuration History")
         if not segment_df.empty:
-            # Reorder or select columns to show Name, Segment Name, URL, and Date clearly
             cols_to_show = [c for c in ["Name", "Segment Name", "Segment URL", "Date"] if c in segment_df.columns]
             st.dataframe(segment_df.sort_values(by="Date", ascending=False)[cols_to_show].head(10), use_container_width=True, hide_index=True)
         else:
