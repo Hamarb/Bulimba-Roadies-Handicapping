@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import os
-import time
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 import gspread
@@ -450,6 +449,8 @@ with tab_admin:
                 else:
                     if save_segment_submission(admin_name, new_url):
                         st.success(f"Segment updated and logged successfully by {admin_name}!")
+                        import time
+                        time.sleep(1) # Give Google Sheets a second to register the append
                         st.rerun()
         
         st.subheader("Segment Configuration History")
