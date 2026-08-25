@@ -100,33 +100,41 @@ def pull_and_push_strava_data():
     client = gspread.authorize(creds)
     spreadsheet_url = os.getenv("GSHEETS_SPREADSHEET_URL")
     
-    # 2. Get the exact active segment URL currently set by admin in the Google Sheet
+    # 2. Get the active segment URL and its name
     active_segment_url = get_active_segment_url_from_sheet(client, spreadsheet_url)
-    
-    # 3. Fetch the clean segment name matching that URL from Strava
     segment_name = get_strava_segment_name(active_segment_url, access_token)
     
-    # 4. Fetch club activities from Strava API
+    # Extract segment ID from URL
+    segment_id = active_segment_url.strip("/").split("/")[-1]
     club_id = os.getenv("STRAVA_CLUB_ID")
-    url = f"https://www.strava.com/api/v3/clubs/{club_id}/activities"
     
-    response = requests.get(url, headers=headers)
+    # 3. Query the Segment Leaderboard endpoint, filtered by club_id
+    leaderboard_url = f"https://www.strava.com/api/v3/segments/{segment_id}/leaderboard"
+    params = {
+        'club_id': club_id,
+        'per_page': 200  # Adjust as needed to capture all club submissions
+    }
+    
+    response = requests.get(leaderboard_url, headers=headers, params=params)
     response.raise_for_status()
-    activities = response.json()
+    leaderboard_data = response.json()
+    
+    entries = leaderboard_data.get('entries', [])
     
     # Parse data into rows matching your schema structure
     rows_to_insert = []
-    for act in activities:
-        athlete_name = f"{act.get('athlete', {}).get('firstname', '')} {act.get('athlete', {}).get('lastname', '')}".strip()
-        moving_time = act.get('moving_time', 0)
-        start_date = act.get('start_date', '')
+    for entry in entries:
+        athlete_name = entry.get('athlete_name', '')
+        # Segment leaderboard returns elapsed_time in seconds for that specific effort
+        elapsed_time = entry.get('elapsed_time', 0)
+        start_date = entry.get('start_date', '') # Date of the specific effort
         
         rows_to_insert.append([
             athlete_name, 
             0,             # FTP placeholder
-            moving_time,   # Segment Time (s)
+            elapsed_time,  # Precise Segment Effort Time (s)
             0,             # Delta Estimate placeholder
-            segment_name,  # The correct segment name matching your active URL
+            segment_name,  # Correct segment name
             start_date
         ])
     
@@ -136,9 +144,9 @@ def pull_and_push_strava_data():
     
     if rows_to_insert:
         sheet.append_rows(rows_to_insert)
-        print(f"Successfully pushed {len(rows_to_insert)} rows using active segment: '{segment_name}'.")
+        print(f"Successfully pushed {len(rows_to_insert)} segment leaderboard entries for '{segment_name}'.")
     else:
-        print("No new activities found to sync.")
+        print("No segment leaderboard entries found for this club.")
         
 if __name__ == "__main__":
     pull_and_push_strava_data()
