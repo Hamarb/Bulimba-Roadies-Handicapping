@@ -25,7 +25,6 @@ def init_connection():
     return client.open_by_url(spreadsheet_url)
 
 @st.cache_data(ttl=600)  # Caches the result for 10 minutes to avoid hitting Google Sheet limits
-    
 def load_data():
     """Loads the main challenge data from the 'Entries' worksheet."""
     expected_columns = ["Name", "FTP (W)", "Segment Time (s)", "Delta_Estimate", "Segment", "Date"]
@@ -70,21 +69,17 @@ def get_segment_data():
         sheet = init_connection().worksheet("Segment")
         rows = sheet.get_all_values()
         
-        # If there's only a header row or nothing at all
         if not rows or len(rows) <= 1:
             return pd.DataFrame(columns=expected_columns)
             
-        # First row is headers, remaining rows are data
         header = rows[0]
         data = rows[1:]
         df = pd.DataFrame(data, columns=header)
         
-        # Ensure all expected columns exist
         for col in expected_columns:
             if col not in df.columns:
                 df[col] = ""
                 
-        # Filter out completely blank rows
         df = df.dropna(how="all")
         if df.empty:
             return pd.DataFrame(columns=expected_columns)
@@ -94,14 +89,14 @@ def get_segment_data():
         st.error(f"Error loading segment history: {e}")
         return pd.DataFrame(columns=expected_columns)
 
-@st.cache_data(ttl=600)
-app_token = os.getenv("STRAVA_ACCESS_TOKEN") # Or use your existing token generator function
+# Safely grab the Strava access token via environment variable
+app_token = os.getenv("STRAVA_ACCESS_TOKEN")
 
 def get_strava_segment_info(segment_url):
     """Fetches the segment name from the Strava API using its URL."""
     try:
         segment_id = segment_url.strip("/").split("/")[-1]
-        headers = {'Authorization': f'Bearer {get_strava_access_token()}'}
+        headers = {'Authorization': f'Bearer {app_token}'}
         response = requests.get(f"https://www.strava.com/api/v3/segments/{segment_id}", headers=headers)
         
         if response.status_code == 200:
@@ -119,8 +114,6 @@ def save_segment_submission(admin_name, url):
         sheet = init_connection().worksheet("Segment")
         sheet.append_row([admin_name, url, now_brisbane])
         
-        # Give Google Sheets a brief moment to commit the append operation 
-        # using the aliased time module to prevent collision.
         t.sleep(1)
         return True
     except Exception as e:
@@ -477,7 +470,6 @@ with tab_admin:
             submitted = st.form_submit_button("Update Segment & Log Submitter")
             
             if submitted:
-                # Safely evaluate inputs with explicit cleaning
                 cleaned_typed = typed_admin_new.strip() if typed_admin_new else ""
                 cleaned_selected = selected_admin_existing.strip() if selected_admin_existing and selected_admin_existing != "-- Select --" else ""
                 
@@ -492,7 +484,6 @@ with tab_admin:
                         st.success(f"Segment updated and logged successfully by {admin_name}!")
                         st.rerun()
         
-        # Load segment data here so it re-queries fresh data AFTER any app reruns
         segment_df = get_segment_data()
         
         st.subheader("Segment Configuration History")
