@@ -47,6 +47,25 @@ def init_google_sheets():
     return sheet
 
 # --- 2. MAIN SYNC LOGIC ---
+def get_active_segment_url_from_sheet(sheet_client, spreadsheet_url):
+    """Pulls the latest active segment URL from the 'Segment' worksheet tab."""
+    try:
+        seg_sheet = sheet_client.open_by_url(spreadsheet_url).worksheet("Segment")
+        rows = seg_sheet.get_all_values()
+        if len(rows) > 1:
+            # Assuming columns are Name, Segment URL, Date; let's check headers or grab the last row's URL column
+            header = rows[0]
+            if "Segment URL" in header:
+                url_idx = header.index("Segment URL")
+                # Look at the last row added
+                last_row = rows[-1]
+                if len(last_row) > url_idx and last_row[url_idx].startswith("http"):
+                    return last_row[url_idx]
+    except Exception:
+        pass
+    # Fallback default if sheet check fails
+    return "https://www.strava.com/segments/22270858"
+    
 def get_strava_segment_name(segment_url, access_token):
     """Extracts segment ID from URL and fetches the segment name from the Strava API."""
     try:
@@ -64,13 +83,30 @@ def pull_and_push_strava_data():
     access_token = get_strava_access_token()
     headers = {'Authorization': f'Bearer {access_token}'}
     
-    # 1. Determine your active segment URL (either dynamic from sheet or hardcoded)
-    active_segment_url = "https://www.strava.com/segments/22270858" 
+    # 1. Initialize Google Sheet client to fetch the active segment URL dynamically
+    creds_dict = {
+        "type": os.getenv("GCP_TYPE"),
+        "project_id": os.getenv("GCP_PROJECT_ID"),
+        "private_key_id": os.getenv("GCP_PRIVATE_KEY_ID"),
+        "private_key": os.getenv("GCP_PRIVATE_KEY", "").replace("\\n", "\n"),
+        "client_email": os.getenv("GCP_CLIENT_EMAIL"),
+        "client_id": os.getenv("GCP_CLIENT_ID_GCP"),
+        "auth_uri": "https://accounts.google.com/oauth/v2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        "client_x509_cert_url": os.getenv("GCP_CERT_URL")
+    }
+    creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+    client = gspread.authorize(creds)
+    spreadsheet_url = os.getenv("GSHEETS_SPREADSHEET_URL")
     
-    # 2. Fetch the clean segment name using the Strava API
+    # 2. Get the exact active segment URL currently set by admin in the Google Sheet
+    active_segment_url = get_active_segment_url_from_sheet(client, spreadsheet_url)
+    
+    # 3. Fetch the clean segment name matching that URL from Strava
     segment_name = get_strava_segment_name(active_segment_url, access_token)
     
-    # Fetch club activities from Strava API
+    # 4. Fetch club activities from Strava API
     club_id = os.getenv("STRAVA_CLUB_ID")
     url = f"https://www.strava.com/api/v3/clubs/{club_id}/activities"
     
@@ -90,17 +126,17 @@ def pull_and_push_strava_data():
             0,             # FTP placeholder
             moving_time,   # Segment Time (s)
             0,             # Delta Estimate placeholder
-            segment_name,  # <--- Put the fetched segment name here instead of URL or placeholder
+            segment_name,  # The correct segment name matching your active URL
             start_date
         ])
     
     # Push data to Google Sheets "Strava" worksheet
-    sheet = init_google_sheets()
+    sheet = client.open_by_url(spreadsheet_url).worksheet("Strava")
     sheet.batch_clear(["A2:F100"])
     
     if rows_to_insert:
         sheet.append_rows(rows_to_insert)
-        print(f"Successfully pushed {len(rows_to_insert)} rows to the 'Strava' Google Sheets tab.")
+        print(f"Successfully pushed {len(rows_to_insert)} rows using active segment: '{segment_name}'.")
     else:
         print("No new activities found to sync.")
         
