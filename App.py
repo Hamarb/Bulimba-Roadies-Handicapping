@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
+import time
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 import gspread
@@ -83,6 +84,10 @@ def save_segment_submission(admin_name, url):
         
         sheet = init_connection().worksheet("Segment")
         sheet.append_row([admin_name, url, now_brisbane])
+        
+        # Give Google Sheets a brief moment to commit the append operation 
+        # before the app re-queries the sheet history on rerun.
+        time.sleep(1)
         return True
     except Exception as e:
         st.error(f"Failed to save segment submission: {e}")
