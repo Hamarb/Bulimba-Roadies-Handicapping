@@ -34,4 +34,4 @@ jobs:
           GCP_CLIENT_EMAIL: ${{ secrets.GCP_CLIENT_EMAIL }}
           GCP_CLIENT_ID_GCP: ${{ secrets.GCP_CLIENT_ID_GCP }}
           GCP_CERT_URL: ${{ secrets.GCP_CERT_URL }}
-        run: python main_strava_sync.py
+        run: python main_handicap_engine.py
