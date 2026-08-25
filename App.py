@@ -23,6 +23,8 @@ def init_connection():
     spreadsheet_url = st.secrets["connections"]["gsheets"]["spreadsheet"]
     return client.open_by_url(spreadsheet_url)
 
+@st.cache_data(ttl=600)  # Caches the result for 10 minutes to avoid hitting Google Sheet limits
+    
 def load_data():
     """Loads the main challenge data from the 'Entries' worksheet."""
     expected_columns = ["Name", "FTP (W)", "Segment Time (s)", "Delta_Estimate", "Segment", "Date"]
