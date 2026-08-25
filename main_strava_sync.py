@@ -53,17 +53,14 @@ def get_active_segment_url_from_sheet(sheet_client, spreadsheet_url):
         seg_sheet = sheet_client.open_by_url(spreadsheet_url).worksheet("Segment")
         rows = seg_sheet.get_all_values()
         if len(rows) > 1:
-            # Assuming columns are Name, Segment URL, Date; let's check headers or grab the last row's URL column
             header = rows[0]
             if "Segment URL" in header:
                 url_idx = header.index("Segment URL")
-                # Look at the last row added
                 last_row = rows[-1]
                 if len(last_row) > url_idx and last_row[url_idx].startswith("http"):
                     return last_row[url_idx]
     except Exception:
         pass
-    # Fallback default if sheet check fails
     return "https://www.strava.com/segments/22270858"
     
 def get_strava_segment_name(segment_url, access_token):
@@ -105,53 +102,39 @@ def pull_and_push_strava_data():
     segment_name = get_strava_segment_name(active_segment_url, access_token)
     
     try:
-        target_segment_id = int(active_segment_url.strip("/").split("/")[-1])
+        segment_id = active_segment_url.strip("/").split("/")[-1]
     except Exception:
         print(f"Invalid segment URL format: {active_segment_url}")
         return
 
-    # 3. Fetch club activities list
-    club_id = os.getenv("STRAVA_CLUB_ID")
-    url = f"https://www.strava.com/api/v3/clubs/{club_id}/activities"
+    # 3. Query the Segment Leaderboard endpoint filtered to "This Month"
+    leaderboard_url = f"https://www.strava.com/api/v3/segments/{segment_id}/leaderboard"
+    params = {
+        'date_range': 'this_month',
+        'per_page': 50
+    }
     
-    response = requests.get(url, headers=headers)
+    response = requests.get(leaderboard_url, headers=headers, params=params)
     response.raise_for_status()
-    activities = response.json()
+    leaderboard_data = response.json()
     
+    entries = leaderboard_data.get('entries', [])
     rows_to_insert = []
     
-    # 4. Check each club activity's detailed segment efforts
-    for act in activities:
-        activity_id = act.get('id')
-        athlete_name = f"{act.get('athlete', {}).get('firstname', '')} {act.get('athlete', {}).get('lastname', '')}".strip()
+    # 4. Parse the leaderboard entries
+    for entry in entries:
+        athlete_name = entry.get('athlete_name', '')
+        elapsed_time = entry.get('elapsed_time', 0) # Precise segment time in seconds
+        start_date = entry.get('start_date', '')
         
-        detail_url = f"https://www.strava.com/api/v3/activities/{activity_id}"
-        detail_params = {'include_all_efforts': 'true'}
-        
-        detail_response = requests.get(detail_url, headers=headers, params=detail_params)
-        if detail_response.status_code != 200:
-            continue
-            
-        activity_detail = detail_response.json()
-        efforts = activity_detail.get('segment_efforts', [])
-        
-        for effort in efforts:
-            seg = effort.get('segment', {})
-            # ADD THIS PRINT LINE TO DEBUG:
-            print(f"DEBUG: Found activity by {athlete_name} with segment '{seg.get('name')}' (ID: {seg.get('id')})")
-            if seg.get('id') == target_segment_id:
-                elapsed_time = effort.get('elapsed_time', 0) # Exact segment time in seconds
-                start_date = effort.get('start_date_local', act.get('start_date', ''))
-                
-                rows_to_insert.append([
-                    athlete_name, 
-                    0,             # FTP placeholder
-                    elapsed_time,  # Precise segment time (s)
-                    0,             # Delta Estimate placeholder
-                    segment_name,  # Correct segment name
-                    start_date
-                ])
-                break # Move to next activity once the matching segment is found
+        rows_to_insert.append([
+            athlete_name, 
+            0,             # FTP placeholder
+            elapsed_time,  # Precise segment time (s)
+            0,             # Delta Estimate placeholder
+            segment_name,  # Correct segment name
+            start_date
+        ])
     
     # 5. Push data to Google Sheets "Strava" worksheet
     sheet = client.open_by_url(spreadsheet_url).worksheet("Strava")
@@ -159,7 +142,9 @@ def pull_and_push_strava_data():
     
     if rows_to_insert:
         sheet.append_rows(rows_to_insert)
-        print(f"Successfully pushed {len(rows_to_insert)} segment effort rows for '{segment_name}'.")
+        print(f"Successfully pushed {len(rows_to_insert)} monthly leaderboard entries for '{segment_name}'.")
     else:
-        print("No club members found with efforts matching this segment in recent activities.")
+        print("No leaderboard entries found for this segment this month.")
+
+if __name__ == "__main__":
     pull_and_push_strava_data()
