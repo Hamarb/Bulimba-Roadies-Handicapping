@@ -185,11 +185,11 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-segment_name = get_strava_segment_info(active_url)
+segment_name = get_strava_segment_info(SEGMENT_URL)
 
 st.markdown(
     f"<div style='text-align: left; margin-top: 25px; margin-bottom: 20px; font-size: 0.9rem;'>"
-    f"The active challenge segment is: <a href='{segment_url}' target='_blank'>{segment_name}</a>"
+    f"The active challenge segment is: <a href='{SEGMENT_URL}' target='_blank'>{segment_name}</a>"
     f"</div>", 
     unsafe_allow_html=True
 )
