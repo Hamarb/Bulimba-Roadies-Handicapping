@@ -420,7 +420,6 @@ with tab_faq:
 with tab_admin:
     if st.checkbox("Show Admin Segment Controls"):
         st.header("Admin Configuration & Submitter Tracking")
-        segment_df = get_segment_data()
         
         with st.form("segment_config_form"):
             admin_names_list = get_existing_names()
@@ -449,9 +448,12 @@ with tab_admin:
                 else:
                     if save_segment_submission(admin_name, new_url):
                         st.success(f"Segment updated and logged successfully by {admin_name}!")
-                        import time
-                        time.sleep(1) # Give Google Sheets a second to register the append
+                        import time as t
+                        t.sleep(1) # Give Google Sheets a second to register the append
                         st.rerun()
+        
+        # Fetch segment data here so it re-queries AFTER any potential updates/reruns
+        segment_df = get_segment_data()
         
         st.subheader("Segment Configuration History")
         if not segment_df.empty:
