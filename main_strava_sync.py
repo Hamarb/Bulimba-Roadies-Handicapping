@@ -2,6 +2,7 @@ import os
 import requests
 import pandas as pd
 import gspread
+import requests
 from google.oauth2.service_account import Credentials
 
 # --- 1. CONFIGURATION & AUTHENTICATION ---
@@ -46,6 +47,22 @@ def init_google_sheets():
     return sheet
 
 # --- 2. MAIN SYNC LOGIC ---
+def get_strava_segment_name(segment_url, access_token):
+    """Extracts segment ID from URL and fetches the segment name from the Strava API."""
+    try:
+        # Extract the numeric segment ID from the end of the URL
+        segment_id = segment_url.strip("/").split("/")[-1]
+        
+        headers = {'Authorization': f'Bearer {access_token}'}
+        response = requests.get(f"https://www.strava.com/api/v3/segments/{segment_id}", headers=headers)
+        
+        if response.status_code == 200:
+            return response.json().get('name', segment_url)
+    except Exception:
+        pass
+    
+    return segment_url  # Fallback to URL if it fails
+
 def pull_and_push_strava_data():
     access_token = get_strava_access_token()
     headers = {'Authorization': f'Bearer {access_token}'}
