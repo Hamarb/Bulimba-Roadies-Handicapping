@@ -83,7 +83,7 @@ def pull_and_push_strava_data():
     access_token = get_strava_access_token()
     headers = {'Authorization': f'Bearer {access_token}'}
     
-    # 1. Initialize Google Sheet client
+    # 1. Initialize Google Sheet client to fetch the active segment URL dynamically
     creds_dict = {
         "type": os.getenv("GCP_TYPE"),
         "project_id": os.getenv("GCP_PROJECT_ID"),
@@ -93,64 +93,71 @@ def pull_and_push_strava_data():
         "client_id": os.getenv("GCP_CLIENT_ID_GCP"),
         "auth_uri": "https://accounts.google.com/oauth/v2/auth",
         "token_uri": "https://oauth2.googleapis.com/token",
-        "auth_provider_x509_cert_url": "https://oauth2.googleapis.com/v1/certs",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
         "client_x509_cert_url": os.getenv("GCP_CERT_URL")
     }
     creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
     client = gspread.authorize(creds)
     spreadsheet_url = os.getenv("GSHEETS_SPREADSHEET_URL")
     
-    # 2. Get active segment URL & name
+    # 2. Get the active segment URL, name, and ID
     active_segment_url = get_active_segment_url_from_sheet(client, spreadsheet_url)
     segment_name = get_strava_segment_name(active_segment_url, access_token)
-    segment_id = active_segment_url.strip("/").split("/")[-1]
     
-    # 3. Pull the general segment leaderboard (bypassing the club-filter 403 error)
-    leaderboard_url = f"https://www.strava.com/api/v3/segments/{segment_id}/leaderboard"
-    params = {'per_page': 50}  # Pull top 50, which covers your whole group easily
+    try:
+        target_segment_id = int(active_segment_url.strip("/").split("/")[-1])
+    except Exception:
+        print(f"Invalid segment URL format: {active_segment_url}")
+        return
+
+    # 3. Fetch club activities list
+    club_id = os.getenv("STRAVA_CLUB_ID")
+    url = f"https://www.strava.com/api/v3/clubs/{club_id}/activities"
     
-    response = requests.get(leaderboard_url, headers=headers, params=params)
+    response = requests.get(url, headers=headers)
     response.raise_for_status()
-    leaderboard_data = response.json()
-    
-    entries = leaderboard_data.get('entries', [])
-    
-    # Optional: If you want to restrict it strictly to your club members, 
-    # you can define a set of your riders' exact Strava profile names here:
-    club_member_names = {
-        "Tony W.", "Joshua B.", "Doug B." 
-        # Add your other participants' names here if you want to filter out strangers
-    }
+    activities = response.json()
     
     rows_to_insert = []
-    for entry in entries:
-        athlete_name = entry.get('athlete_name', '')
-        
-        # If you want to filter by your club roster, uncomment the line below:
-        # if athlete_name not in club_member_names: continue
-            
-        elapsed_time = entry.get('elapsed_time', 0)
-        start_date = entry.get('start_date', '')
-        
-        rows_to_inst = [
-            athlete_name, 
-            0,             # FTP placeholder
-            elapsed_time,  # Precise segment time in seconds
-            0,             # Delta Estimate placeholder
-            segment_name,  # Correct segment name
-            start_date
-        ]
-        rows_to_insert.append(rows_to_inst)
     
-    # 4. Push data to Google Sheets "Strava" worksheet
+    # 4. Check each club activity's detailed segment efforts
+    for act in activities:
+        activity_id = act.get('id')
+        athlete_name = f"{act.get('athlete', {}).get('firstname', '')} {act.get('athlete', {}).get('lastname', '')}".strip()
+        
+        detail_url = f"https://www.strava.com/api/v3/activities/{activity_id}"
+        detail_params = {'include_all_efforts': 'true'}
+        
+        detail_response = requests.get(detail_url, headers=headers, params=detail_params)
+        if detail_response.status_code != 200:
+            continue
+            
+        activity_detail = detail_response.json()
+        efforts = activity_detail.get('segment_efforts', [])
+        
+        for effort in efforts:
+            seg = effort.get('segment', {})
+            if seg.get('id') == target_segment_id:
+                elapsed_time = effort.get('elapsed_time', 0) # Exact segment time in seconds
+                start_date = effort.get('start_date_local', act.get('start_date', ''))
+                
+                rows_to_insert.append([
+                    athlete_name, 
+                    0,             # FTP placeholder
+                    elapsed_time,  # Precise segment time (s)
+                    0,             # Delta Estimate placeholder
+                    segment_name,  # Correct segment name
+                    start_date
+                ])
+                break # Move to next activity once the matching segment is found
+    
+    # 5. Push data to Google Sheets "Strava" worksheet
     sheet = client.open_by_url(spreadsheet_url).worksheet("Strava")
     sheet.batch_clear(["A2:F100"])
     
     if rows_to_insert:
         sheet.append_rows(rows_to_insert)
-        print(f"Successfully pushed {len(rows_to_insert)} leaderboard entries for '{segment_name}'.")
+        print(f"Successfully pushed {len(rows_to_insert)} segment effort rows for '{segment_name}'.")
     else:
-        print("No matching leaderboard entries found.")
-        
-if __name__ == "__main__":
+        print("No club members found with efforts matching this segment in recent activities.")
     pull_and_push_strava_data()
