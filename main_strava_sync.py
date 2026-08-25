@@ -50,9 +50,7 @@ def init_google_sheets():
 def get_strava_segment_name(segment_url, access_token):
     """Extracts segment ID from URL and fetches the segment name from the Strava API."""
     try:
-        # Extract the numeric segment ID from the end of the URL
         segment_id = segment_url.strip("/").split("/")[-1]
-        
         headers = {'Authorization': f'Bearer {access_token}'}
         response = requests.get(f"https://www.strava.com/api/v3/segments/{segment_id}", headers=headers)
         
@@ -60,12 +58,17 @@ def get_strava_segment_name(segment_url, access_token):
             return response.json().get('name', segment_url)
     except Exception:
         pass
-    
-    return segment_url  # Fallback to URL if it fails
+    return segment_url
 
 def pull_and_push_strava_data():
     access_token = get_strava_access_token()
     headers = {'Authorization': f'Bearer {access_token}'}
+    
+    # 1. Determine your active segment URL (either dynamic from sheet or hardcoded)
+    active_segment_url = "https://www.strava.com/segments/22270858" 
+    
+    # 2. Fetch the clean segment name using the Strava API
+    segment_name = get_strava_segment_name(active_segment_url, access_token)
     
     # Fetch club activities from Strava API
     club_id = os.getenv("STRAVA_CLUB_ID")
@@ -87,14 +90,12 @@ def pull_and_push_strava_data():
             0,             # FTP placeholder
             moving_time,   # Segment Time (s)
             0,             # Delta Estimate placeholder
-            "Strava API Sync", 
+            segment_name,  # <--- Put the fetched segment name here instead of URL or placeholder
             start_date
         ])
     
     # Push data to Google Sheets "Strava" worksheet
     sheet = init_google_sheets()
-    
-    # Clear existing data rows (keeping header row 1) before writing fresh data
     sheet.batch_clear(["A2:F100"])
     
     if rows_to_insert:
@@ -102,6 +103,6 @@ def pull_and_push_strava_data():
         print(f"Successfully pushed {len(rows_to_insert)} rows to the 'Strava' Google Sheets tab.")
     else:
         print("No new activities found to sync.")
-
+        
 if __name__ == "__main__":
     pull_and_push_strava_data()
