@@ -100,43 +100,53 @@ def pull_and_push_strava_data():
     client = gspread.authorize(creds)
     spreadsheet_url = os.getenv("GSHEETS_SPREADSHEET_URL")
     
-    # 2. Get the active segment URL and its name
+    # 2. Get the active segment URL and target segment ID
     active_segment_url = get_active_segment_url_from_sheet(client, spreadsheet_url)
     segment_name = get_strava_segment_name(active_segment_url, access_token)
+    target_segment_id = int(active_segment_url.strip("/").split("/")[-1])
     
-    # Extract segment ID from URL
-    segment_id = active_segment_url.strip("/").split("/")[-1]
+    # 3. Fetch club activities list
     club_id = os.getenv("STRAVA_CLUB_ID")
+    url = f"https://www.strava.com/api/v3/clubs/{club_id}/activities"
     
-    # 3. Query the Segment Leaderboard endpoint, filtered by club_id
-    leaderboard_url = f"https://www.strava.com/api/v3/segments/{segment_id}/leaderboard"
-    params = {
-        'club_id': club_id,
-        'per_page': 200  # Adjust as needed to capture all club submissions
-    }
-    
-    response = requests.get(leaderboard_url, headers=headers, params=params)
+    response = requests.get(url, headers=headers)
     response.raise_for_status()
-    leaderboard_data = response.json()
+    activities = response.json()
     
-    entries = leaderboard_data.get('entries', [])
-    
-    # Parse data into rows matching your schema structure
     rows_to_insert = []
-    for entry in entries:
-        athlete_name = entry.get('athlete_name', '')
-        # Segment leaderboard returns elapsed_time in seconds for that specific effort
-        elapsed_time = entry.get('elapsed_time', 0)
-        start_date = entry.get('start_date', '') # Date of the specific effort
+    
+    # 4. For each club activity, fetch detailed activity data to check for segment efforts
+    for act in activities:
+        activity_id = act.get('id')
+        athlete_name = f"{act.get('athlete', {}).get('firstname', '')} {act.get('athlete', {}).get('lastname', '')}".strip()
         
-        rows_to_insert.append([
-            athlete_name, 
-            0,             # FTP placeholder
-            elapsed_time,  # Precise Segment Effort Time (s)
-            0,             # Delta Estimate placeholder
-            segment_name,  # Correct segment name
-            start_date
-        ])
+        # Query detailed activity endpoint to get segment efforts included in the ride
+        detail_url = f"https://www.strava.com/api/v3/activities/{activity_id}"
+        detail_params = {'include_all_efforts': 'true'}
+        
+        detail_response = requests.get(detail_url, headers=headers, params=detail_params)
+        if detail_response.status_code != 200:
+            continue
+            
+        activity_detail = detail_response.json()
+        efforts = activity_detail.get('segment_efforts', [])
+        
+        # Look for an effort that matches our target segment ID
+        for effort in efforts:
+            seg = effort.get('segment', {})
+            if seg.get('id') == target_segment_id:
+                elapsed_time = effort.get('elapsed_time', 0) # Precise segment time in seconds
+                start_date = effort.get('start_date_local', act.get('start_date', ''))
+                
+                rows_to_insert.append([
+                    athlete_name, 
+                    0,             # FTP placeholder
+                    elapsed_time,  # Accurate segment time (s)
+                    0,             # Delta Estimate placeholder
+                    segment_name,  # Correct segment name
+                    start_date
+                ])
+                break # Found the matching segment effort for this activity, move to next activity
     
     # Push data to Google Sheets "Strava" worksheet
     sheet = client.open_by_url(spreadsheet_url).worksheet("Strava")
@@ -144,9 +154,9 @@ def pull_and_push_strava_data():
     
     if rows_to_insert:
         sheet.append_rows(rows_to_insert)
-        print(f"Successfully pushed {len(rows_to_insert)} segment leaderboard entries for '{segment_name}'.")
+        print(f"Successfully pushed {len(rows_to_insert)} matching segment effort rows for '{segment_name}'.")
     else:
-        print("No segment leaderboard entries found for this club.")
+        print("No club members found with efforts matching this segment.")
         
 if __name__ == "__main__":
     pull_and_push_strava_data()
