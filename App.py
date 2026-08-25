@@ -64,7 +64,7 @@ def save_data(df):
 
 def get_segment_data():
     """Fetches segment configuration history from the 'Segment' worksheet using raw values."""
-    expected_columns = ["Name", "Segment URL", "Date"]
+    expected_columns = ["Name", "Segment Name", "Segment URL", "Date"]
     try:
         sheet = init_connection().worksheet("Segment")
         rows = sheet.get_all_values()
@@ -106,20 +106,23 @@ def get_strava_segment_info(segment_url):
     return "Active Segment"
 
 def save_segment_submission(admin_name, url):
-    """Appends submitter name, segment URL, and timestamp to the 'Segment' worksheet."""
+    """Appends submitter name, segment name, segment URL, and timestamp to the 'Segment' worksheet."""
     try:
         brisbane_tz = ZoneInfo("Australia/Brisbane")
         now_brisbane = datetime.now(brisbane_tz).strftime("%Y-%m-%d %H:%M:%S")
         
+        # Fetch the dynamic name from Strava before saving
+        seg_name = get_strava_segment_info(url)
+        
         sheet = init_connection().worksheet("Segment")
-        sheet.append_row([admin_name, url, now_brisbane])
+        sheet.append_row([admin_name, seg_name, url, now_brisbane])
         
         t.sleep(1)
         return True
     except Exception as e:
         st.error(f"Failed to save segment submission: {e}")
         return False
-
+        
 def get_segment_url():
     """Retrieves the latest active segment URL from the Google Sheet."""
     segment_df = get_segment_data()
@@ -488,6 +491,8 @@ with tab_admin:
         
         st.subheader("Segment Configuration History")
         if not segment_df.empty:
-            st.dataframe(segment_df.sort_values(by="Date", ascending=False).head(10), use_container_width=True, hide_index=True)
+            # Reorder or select columns to show Name, Segment Name, URL, and Date clearly
+            cols_to_show = [c for c in ["Name", "Segment Name", "Segment URL", "Date"] if c in segment_df.columns]
+            st.dataframe(segment_df.sort_values(by="Date", ascending=False)[cols_to_show].head(10), use_container_width=True, hide_index=True)
         else:
             st.write("No segment history available.")
